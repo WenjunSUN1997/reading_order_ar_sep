@@ -1,9 +1,10 @@
 import submitit
+from tensorflow.python.ops.gen_summary_ops import write_histogram_summary_eager_fallback
+
 
 def loop():
-    a = 1
     while True:
-        a += 1
+       pass
 
 if __name__ == "__main__":
     executor = submitit.AutoExecutor(folder='/Utilisateurs/wsun01/logs/')  # Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/graph_ar_sep.iml" filepath="$PROJECT_DIR$/.idea/graph_ar_sep.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/reading_order_ar_sep.iml" filepath="$PROJECT_DIR$/.idea/reading_order_ar_sep.iml" />
     </modules>
   </component>
 </project>
