@@ -66,7 +66,17 @@ class ReadingOrderDataset(Dataset):
         return benchmark_result, with_sep_result, no_sep_result
 
     def generate_gt(self, length):
-        pass
+        result = []
+        end = 1
+        for i in range(length-1):
+            temp = [0] * length
+            temp[end] = 1
+            end += 1
+            result.append(temp)
+
+        result.append([0] * length)
+        result = torch.tensor(result).to(self.device)
+        return result
 
     def __len__(self):
         return len(self.file_name_list)
@@ -80,6 +90,8 @@ class ReadingOrderDataset(Dataset):
         benchmark_result, with_sep_result, no_sep_result = self.get_fig_result(file_path, annotation_list)
         gt = [x for x in range(len(annotation_list)+2)]
         gt_str =" ".join(str(x) for x in gt)
+        gt_matrix = self.generate_gt(len(annotation_list)+2)
+        print()
 
 def process_img(lang):
     if lang == 'fr':
