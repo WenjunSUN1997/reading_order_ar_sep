@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 from transformers import AutoModel
 from utils.datasetor_reading_order import ReadingOrderDataset
 from torch.utils.data.dataloader import DataLoader
@@ -59,11 +60,29 @@ class ReadingOrderModel(nn.Module):
         return sum(loss)
 
     def decode(self, output):
-        rout = []
+        rout = [0]
         item_num = output.shape[0]
-        link_sub_matirx = output[:, :-1, 1]
+        link_sub_matirx = output[:-1, :-1, 1].detach().cpu().numpy()
         while True:
-            pass
+            if len(rout) == item_num -1 :
+                break
+
+            last_step = rout[-1]
+            candidate_list = link_sub_matirx[last_step].argsort()
+            candidate_index = 1
+            while True:
+                if (candidate_list[-candidate_index] not in rout
+                        and candidate_list[-candidate_index] != last_step):
+                    next_step = candidate_list[-candidate_index]
+                    rout.append(next_step)
+                    break
+                else:
+                    candidate_index += 1
+
+        return rout
+
+    def vision_process(self, input):
+        pass
 
     def circle_loss(self, output):
         pass
@@ -86,8 +105,10 @@ class ReadingOrderModel(nn.Module):
         text_emdedding = self.lang_model(input_ids=input['input_ids'].squeeze(0),
                                             attention_mask=input['attention_mask'].squeeze(0))['last_hidden_state']
         text_emdedding = torch.mean(text_emdedding, dim=1)
+        # return
         vision_emdedding = self.vision_model(input['benchmark_fig'].squeeze(0))['last_hidden_state']
         vision_emdedding = torch.mean(vision_emdedding, dim=1)
+        # return
         text_embedding_after_encoder = self.text_encoder(text_emdedding)
         all_embedding = torch.cat((text_embedding_after_encoder, vision_emdedding), dim=1)
         all_embedding = self.commu_encoder(all_embedding)
@@ -104,7 +125,7 @@ class ReadingOrderModel(nn.Module):
 
 
 if __name__ == "__main__":
-    config = {'lang': r'fi',
+    config = {'lang': 'fr',
               'text_model_name': "dbmdz/bert-base-historic-multilingual-64k-td-cased",
               'max_token_num': 512,
               'device': 'cuda:0',

@@ -1,8 +1,6 @@
 import torch
 import submitit
 import copy
-
-from sympy.physics.units import becquerel
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from utils.xml_reader import XmlProcessor
@@ -17,11 +15,11 @@ class ReadingOrderDataset(Dataset):
     def __init__(self, config):
         self.lang = config['lang']
         if self.lang == 'fi':
-            self.root_path = r'../data/AS_TrainingSet_NLF_NewsEye_v2/'
-            self.img_root_path = r'../data/fi_reading_order/'
+            self.root_path = r'data/AS_TrainingSet_NLF_NewsEye_v2/'
+            self.img_root_path = r'data/fi_reading_order/'
         else:
-            self.root_path = r'../data/AS_TrainingSet_BnF_NewsEye_v2'
-            self.img_root_path = r'../data/fr_reading_order/'
+            self.root_path = r'data/AS_TrainingSet_BnF_NewsEye_v2'
+            self.img_root_path = r'data/fr_reading_order/'
 
         self.file_name_list = [x for x in os.listdir(self.root_path) if 'xml' in x]
         self.tokenizer = AutoTokenizer.from_pretrained(config['text_model_name'])
@@ -88,6 +86,7 @@ class ReadingOrderDataset(Dataset):
         annotation_list = sorted(XmlProcessor(0, file_path).get_annotation(),
                                  key=lambda x: (int(x['paragraph_order'].split('a')[-1]),
                                                 x['reading_order']))
+        print(len(annotation_list))
         tokenized_result = self.get_tokenizer_result(annotation_list)
         benchmark_result, with_sep_result, no_sep_result, background_seq_result = (
             self.get_fig_result(file_path, annotation_list))
@@ -107,11 +106,11 @@ class ReadingOrderDataset(Dataset):
 
 def process_img(lang):
     if lang == 'fr':
-        root_path = r'../data/AS_TrainingSet_BnF_NewsEye_v2/'
-        store_root_path = r'../data/fr_reading_order/'
+        root_path = r'data/AS_TrainingSet_BnF_NewsEye_v2/'
+        store_root_path = r'data/fr_reading_order/'
     else:
-        root_path = r'../data/AS_TrainingSet_NLF_NewsEye_v2/'
-        store_root_path = r'../data/fi_reading_order/'
+        root_path = r'data/AS_TrainingSet_NLF_NewsEye_v2/'
+        store_root_path = r'data/fi_reading_order/'
 
     os.makedirs(store_root_path, exist_ok=True)
     file_name_list = [x for x in os.listdir(root_path) if 'xml' in x]
