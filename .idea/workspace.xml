@@ -66,29 +66,29 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.data_organize.executor": "Run",
-    "Python.datasetor.executor": "Debug",
-    "Python.datasetor_reading_order (1).executor": "Run",
-    "Python.loop.executor": "Run",
-    "Python.page_drawer.executor": "Debug",
-    "Python.reading_order_model.executor": "Debug",
-    "Python.train.executor": "Debug",
-    "Python.xycut.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "E:/code/test/reading_order_ar_sep",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "python.debugger.dataview.coloredbydefault": "false",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.data_organize.executor&quot;: &quot;Run&quot;,
+    &quot;Python.datasetor.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.datasetor_reading_order (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.loop.executor&quot;: &quot;Run&quot;,
+    &quot;Python.page_drawer.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.reading_order_model.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.train.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.xycut.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/code/test/reading_order_ar_sep&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;python.debugger.dataview.coloredbydefault&quot;: &quot;false&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="ReadonlyStatusHandler">
     <option name="SHOW_DIALOG" value="false" />
   </component>
@@ -217,9 +217,9 @@
       <list>
         <item itemvalue="Python.train" />
         <item itemvalue="Python.loop" />
+        <item itemvalue="Python.datasetor_reading_order (1)" />
         <item itemvalue="Python.reading_order_model" />
         <item itemvalue="Python.data_organize" />
-        <item itemvalue="Python.datasetor_reading_order (1)" />
       </list>
     </recent_temporary>
   </component>
@@ -254,6 +254,11 @@
       <workItem from="1728912990635" duration="387000" />
       <workItem from="1728913749136" duration="21000" />
       <workItem from="1728913844730" duration="1071000" />
+      <workItem from="1729063869944" duration="446000" />
+      <workItem from="1729064323451" duration="4413000" />
+      <workItem from="1729068790413" duration="13816000" />
+      <workItem from="1729149285431" duration="15911000" />
+      <workItem from="1729236448201" duration="7441000" />
     </task>
     <servers />
   </component>
@@ -270,23 +275,28 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/model/reading_order_model.py</url>
-          <line>81</line>
-          <option name="timeStamp" value="85" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/model/reading_order_model.py</url>
-          <line>142</line>
+          <line>161</line>
           <option name="timeStamp" value="92" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/model/reading_order_model.py</url>
-          <line>108</line>
-          <option name="timeStamp" value="97" />
+          <url>file://$PROJECT_DIR$/utils/datasetor_reading_order.py</url>
+          <line>167</line>
+          <option name="timeStamp" value="120" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/model/reading_order_model.py</url>
-          <line>104</line>
-          <option name="timeStamp" value="98" />
+          <line>98</line>
+          <option name="timeStamp" value="121" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/model/reading_order_model.py</url>
+          <line>131</line>
+          <option name="timeStamp" value="129" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/model/reading_order_model.py</url>
+          <line>128</line>
+          <option name="timeStamp" value="134" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -307,10 +317,10 @@
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$xycut.coverage" NAME="xycut Coverage Results" MODIFIED="1727779530436" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/benchmark" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$reading_order_model.coverage" NAME="reading_order_model Coverage Results" MODIFIED="1728571144438" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/model" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$datasetor.coverage" NAME="datasetor Coverage Results" MODIFIED="1727955190997" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
-    <SUITE FILE_PATH="coverage/reading_order_ar_sep$loop.coverage" NAME="loop Coverage Results" MODIFIED="1728657683450" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/reading_order_ar_sep$loop.coverage" NAME="loop Coverage Results" MODIFIED="1729247010757" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$page_drawer.coverage" NAME="page_drawer Coverage Results" MODIFIED="1727630065124" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$data_organize.coverage" NAME="data_organize Coverage Results" MODIFIED="1728571083306" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
-    <SUITE FILE_PATH="coverage/reading_order_ar_sep$train.coverage" NAME="train Coverage Results" MODIFIED="1728658615593" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/reading_order_ar_sep$datasetor_reading_order__1_.coverage" NAME="datasetor_reading_order (1) Coverage Results" MODIFIED="1728305126245" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
+    <SUITE FILE_PATH="coverage/reading_order_ar_sep$train.coverage" NAME="train Coverage Results" MODIFIED="1729250209305" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/reading_order_ar_sep$datasetor_reading_order__1_.coverage" NAME="datasetor_reading_order (1) Coverage Results" MODIFIED="1729157163848" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
   </component>
 </project>

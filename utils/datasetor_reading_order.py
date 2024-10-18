@@ -27,6 +27,7 @@ class ReadingOrderDataset(Dataset):
         self.device = config['device']
         self.use_sep_fig = config['use_sep_fig']
         self.vision_processor = AutoProcessor.from_pretrained(config['vision_model_name'])
+        self.vision_processor.do_resize = False
         self.resize = config['resize']
         self.is_benchmark = config['is_benchmark']
 
@@ -47,7 +48,7 @@ class ReadingOrderDataset(Dataset):
         with_sep_result = []
         no_sep_result = []
         for annotation in annotation_list:
-            benchmark_result.append(Image.open(img_folder+str(annotation['index'])+'_benchmark.jpg').convert('RGB').resize(self.resize))
+            benchmark_result.append(Image.open(img_folder + str(annotation['index'])+'_benchmark.jpg').convert('RGB').resize(self.resize))
             with_sep_result.append(Image.open(img_folder + str(annotation['index']) + '_with_sep.jpg').convert('RGB').resize(self.resize))
             no_sep_result.append(Image.open(img_folder + str(annotation['index']) + '_no_sep.jpg').convert('RGB').resize(self.resize))
 
@@ -152,25 +153,39 @@ def process_img(lang):
 
         # break
 
+def convert_img_to_nparray(lang):
+    if lang == 'fr':
+        store_root_path = r'../data/fr_reading_order/'
+    else:
+        store_root_path = r'../data/fi_reading_order/'
+
+    folder_list = os.listdir(store_root_path)
+    for _, folder in tqdm(enumerate(folder_list), total=len(folder_list)):
+        file_list = [x for x in os.listdir(os.path.join(store_root_path, folder)) if 'jpg' in x]
+        for file_name in file_list:
+            img = Image.open(os.path.join(store_root_path, folder, file_name)).convert('RGB')
+            img = np.array(img)
+            np.save(os.path.join(store_root_path, folder, file_name.replace('.jpg', '.npy')), img)
+
+
 if __name__ == '__main__':
-    process_img('fi')
-    process_img('fr')
-    # executor = submitit.AutoExecutor(
-    #     folder='/Utilisateurs/wsun01/logs/')# Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
-    #
-    # for lang in ['fr', 'fi']:
-    #     executor.update_parameters(
-    #         job_name='reading_'+lang,
-    #         timeout_min=2160 * 4,
-    #         # gpus_per_node=1,
-    #         cpus_per_task=5,
-    #         # mem_gb=40 * 2,
-    #         # slurm_partition='gpu-a6000',
-    #         slurm_additional_parameters={
-    #             'nodelist': 'l3icalcul09'
-    #         }
-    #     )
-    #     executor.submit(process_img, lang)
+    # convert_img_to_nparray(lang='fr')
+    executor = submitit.AutoExecutor(
+        folder='/Utilisateurs/wsun01/logs/')# Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
+
+    for lang in ['fr', 'fi']:
+        executor.update_parameters(
+            job_name='reading_'+lang,
+            timeout_min=2160 * 4,
+            # gpus_per_node=1,
+            cpus_per_task=10,
+            # mem_gb=40 * 2,
+            # slurm_partition='gpu-a6000',
+            slurm_additional_parameters={
+                'nodelist': 'l3icalcul09'
+            }
+        )
+        executor.submit(convert_img_to_nparray, lang)
 
     # process_img('fr')
     # config = {'lang': r'fi',
