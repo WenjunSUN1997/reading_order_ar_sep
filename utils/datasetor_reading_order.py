@@ -66,7 +66,8 @@ class ReadingOrderDataset(Dataset):
         no_sep_result = self.vision_processor(no_sep_result, return_tensors="pt", do_resize=False)
         return benchmark_result, with_sep_result, no_sep_result, background_seq_result
 
-    def generate_gt(self, length):
+    def generate_gt(self, annotation_list):
+        length = len(annotation_list) + 2
         result = []
         end = 1
         for i in range(length-1):
@@ -77,7 +78,18 @@ class ReadingOrderDataset(Dataset):
 
         result.append([0] * length)
         result = torch.tensor(result).to(self.device)
-        return result
+        article_matrix = []
+        for annotation in annotation_list:
+            matrix_this_item = []
+            for i in range(len(annotation_list)):
+                if annotation['paragraph_order'] == annotation_list[i]['paragraph_order']:
+                    matrix_this_item.append(1)
+                else:
+                    matrix_this_item.append(0)
+            article_matrix.append(matrix_this_item)
+
+        article_matrix = torch.tensor(article_matrix).to(self.device)
+        return result, article_matrix
 
     def __len__(self):
         return len(self.file_name_list)
@@ -88,13 +100,13 @@ class ReadingOrderDataset(Dataset):
                                  key=lambda x: (int(x['paragraph_order'].split('a')[-1]),
                                                 x['reading_order']))
         print(len(annotation_list))
+        gt_matrix, article_matrix = self.generate_gt(annotation_list)
         tokenized_result = self.get_tokenizer_result(annotation_list)
         benchmark_result, with_sep_result, no_sep_result, background_seq_result = (
             self.get_fig_result(file_path, annotation_list))
         gt = [x for x in range(len(annotation_list)+2)]
         gt_str =" ".join(str(x) for x in gt)
-        gt_matrix = self.generate_gt(len(annotation_list)+2)
-        print(len(gt))
+
         return {'input_ids': tokenized_result['input_ids'].to(self.device),
                 'attention_mask': tokenized_result['attention_mask'].to(self.device),
                 'benchmark_fig': benchmark_result['pixel_values'].to(self.device),
@@ -103,6 +115,7 @@ class ReadingOrderDataset(Dataset):
                 'background_seq': background_seq_result['pixel_values'].to(self.device),
                 'gt_matrix': gt_matrix.to(self.device),
                 'gt_str': torch.tensor(gt).to(self.device),
+                'article_matirx': article_matrix.to(self.device),
                 }
 
 def process_img(lang):
@@ -170,35 +183,35 @@ def convert_img_to_nparray(lang):
 
 if __name__ == '__main__':
     # convert_img_to_nparray(lang='fr')
-    executor = submitit.AutoExecutor(
-        folder='/Utilisateurs/wsun01/logs/')# Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
-
-    for lang in ['fr', 'fi']:
-        executor.update_parameters(
-            job_name='reading_'+lang,
-            timeout_min=2160 * 4,
-            # gpus_per_node=1,
-            cpus_per_task=10,
-            # mem_gb=40 * 2,
-            # slurm_partition='gpu-a6000',
-            slurm_additional_parameters={
-                'nodelist': 'l3icalcul09'
-            }
-        )
-        executor.submit(convert_img_to_nparray, lang)
+    # executor = submitit.AutoExecutor(
+    #     folder='/Utilisateurs/wsun01/logs/')# Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
+    #
+    # for lang in ['fr', 'fi']:
+    #     executor.update_parameters(
+    #         job_name='reading_'+lang,
+    #         timeout_min=2160 * 4,
+    #         # gpus_per_node=1,
+    #         cpus_per_task=10,
+    #         # mem_gb=40 * 2,
+    #         # slurm_partition='gpu-a6000',
+    #         slurm_additional_parameters={
+    #             'nodelist': 'l3icalcul09'
+    #         }
+    #     )
+    #     executor.submit(convert_img_to_nparray, lang)
 
     # process_img('fr')
-    # config = {'lang': r'fi',
-    #           'text_model_name': "dbmdz/bert-base-historic-multilingual-64k-td-cased",
-    #           'max_token_num': 512,
-    #           'device': 'cpu',
-    #           'use_sep_fig': True,
-    #           'vision_model_name': 'microsoft/trocr-base-handwritten',
-    #           'resize': (512, 512),
-    #           'is_benchmark': False,}
-    # # file_path = r'../data/AS_TrainingSet_BnF_NewsEye_v2/'
-    # datasetor = ReadingOrderDataset(config)
-    # a = datasetor[2]
+    config = {'lang': r'fi',
+              'text_model_name': "dbmdz/bert-base-historic-multilingual-64k-td-cased",
+              'max_token_num': 512,
+              'device': 'cpu',
+              'use_sep_fig': True,
+              'vision_model_name': 'microsoft/trocr-base-handwritten',
+              'resize': (512, 512),
+              'is_benchmark': False,}
+    # file_path = r'../data/AS_TrainingSet_BnF_NewsEye_v2/'
+    datasetor = ReadingOrderDataset(config)
+    a = datasetor[2]
 
 
 
