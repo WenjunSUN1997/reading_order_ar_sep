@@ -5,6 +5,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from utils.datasetor_reading_order import ReadingOrderDataset
 from model.reading_order_model import ReadingOrderModel
+from model.article_single_fig_model import ArticleSingleFigModel
 
 torch.manual_seed(3407)
 
@@ -12,7 +13,7 @@ def train(config):
     epoch_num = 1000
     reading_order_dataseter = ReadingOrderDataset(config)
     reading_order_dataloader = DataLoader(reading_order_dataseter, batch_size=config['batch_size'], shuffle=False)
-    reading_order_model = ReadingOrderModel(config)
+    reading_order_model = ArticleSingleFigModel(config)
     reading_order_model.to(config['device'])
     # reading_order_model = torch.nn.DataParallel(reading_order_model)
     if torch.cuda.device_count() > 1:

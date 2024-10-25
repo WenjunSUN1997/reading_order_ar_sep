@@ -33,8 +33,8 @@ class ReadingOrderDataset(Dataset):
 
     def get_tokenizer_result(self, annotation_list):
         text_list = [x['text'] for x in annotation_list]
-        text_list.insert(0, '###')
-        text_list.append('###')
+        # text_list.insert(0, '###')
+        # text_list.append('###')
         tokenized_result = self.tokenizer(text_list,
                                           max_length=self.max_token_num,
                                           truncation=True,
@@ -54,12 +54,12 @@ class ReadingOrderDataset(Dataset):
 
         background = Image.open(img_folder+'cls_eos.jpg').convert('RGB').resize(self.resize)
         background_seq = Image.open(img_folder + 'background_sep.jpg').convert('RGB').resize(self.resize)
-        benchmark_result.insert(0, background)
-        benchmark_result.append(background)
-        with_sep_result.insert(0, background)
-        with_sep_result.append(background)
-        no_sep_result.insert(0, background)
-        no_sep_result.append(background)
+        # benchmark_result.insert(0, background)
+        # benchmark_result.append(background)
+        # with_sep_result.insert(0, background)
+        # with_sep_result.append(background)
+        # no_sep_result.insert(0, background)
+        # no_sep_result.append(background)
         background_seq_result = self.vision_processor([background_seq], return_tensors="pt", do_resize=False)
         benchmark_result = self.vision_processor(benchmark_result, return_tensors="pt", do_resize=False)
         with_sep_result = self.vision_processor(with_sep_result, return_tensors="pt", do_resize=False)

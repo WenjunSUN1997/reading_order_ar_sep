@@ -41,6 +41,7 @@ class ReadingOrderModel(nn.Module):
                                                           num_layers=2)
         self.commu_encoder = torch.nn.TransformerEncoder(self.commu_encoder_layer,
                                                          num_layers=2)
+        # self.normal = torch.nn.LayerNorm(self.linear_dim)
         self.linear = torch.nn.Linear(self.linear_dim, 2)
         self.activate = nn.Softmax(dim=-1)
 
@@ -85,6 +86,14 @@ class ReadingOrderModel(nn.Module):
 
         return rout
 
+    # def article_decode(self, output):
+    #     #TODO: decode the output, return the article result
+    #     pass
+    #
+    # def article_loss(self, output, gt):
+    #     #TODO： calculate the classification loss of article result, cross_entropy or focal loss
+    #     pass
+
     def get_embedding_by_item(self, input):
         input = {key:value.squeeze(0) for key, value in input.items()}
         block_number = input['input_ids'].shape[0]
@@ -98,11 +107,11 @@ class ReadingOrderModel(nn.Module):
 
         return torch.cat(text_embedding, dim=0), torch.cat(vision_embedding, dim=0)
 
-    def vision_process(self, input):
-        pass
-
-    def circle_loss(self, output):
-        pass
+    # def vision_process(self, input):
+    #     pass
+    #
+    # def circle_loss(self, output):
+    #     pass
 
     def organize(self, all_embedding, background_sep_embedding=None):
         item_num, dim = all_embedding.shape
