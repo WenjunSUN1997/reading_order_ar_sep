@@ -80,7 +80,7 @@ class ArticleSingleFigModel(ReadingOrderModel):
         max_index = torch.argmax(output_linear, dim=1).detach().cpu().numpy()
         article_result = self.article_decode(max_index, length_record)
         article_gt =  self.article_decode(gt.detach().cpu().numpy(), length_record)
-        performance = self.evaluator.evaluate(article_result, article_gt)
+        performance = self.evaluator.evaluate_single_page(article_result, article_gt)
         return {'loss': loss, 'performance': performance}
 
 

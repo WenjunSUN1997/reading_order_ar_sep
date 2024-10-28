@@ -5,6 +5,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from utils.datasetor_reading_order import ReadingOrderDataset
 from model.reading_order_model import ReadingOrderModel
+from utils.evaluator import Evaluator
 from model.article_single_fig_model import ArticleSingleFigModel
 
 torch.manual_seed(3407)
@@ -12,9 +13,11 @@ torch.manual_seed(3407)
 def train(config):
     epoch_num = 1000
     reading_order_dataseter = ReadingOrderDataset(config)
-    reading_order_dataloader = DataLoader(reading_order_dataseter, batch_size=config['batch_size'], shuffle=False)
+    train_dataloader = DataLoader(reading_order_dataseter, batch_size=config['batch_size'], shuffle=False)
+    test_dataloader = DataLoader(reading_order_dataseter, batch_size=config['batch_size'], shuffle=False)
     reading_order_model = ArticleSingleFigModel(config)
     reading_order_model.to(config['device'])
+    model_evaluator = Evaluator()
     # reading_order_model = torch.nn.DataParallel(reading_order_model)
     if torch.cuda.device_count() > 1:
         reading_order_model.vision_model.to('cuda:1')
@@ -27,7 +30,7 @@ def train(config):
                                   verbose=True)
     loss_all = [0]
     for epoch_index in range(epoch_num):
-        for step, data in tqdm(enumerate(reading_order_dataloader), total=len(reading_order_dataloader)):
+        for step, data in tqdm(enumerate(train_dataloader), total=len(train_dataloader)):
             # break
             output = reading_order_model(data)
             loss = output['loss']
@@ -35,6 +38,8 @@ def train(config):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+        evaluate_result = model_evaluator.model_evaluate(reading_order_model, test_dataloader)
 
     print()
 

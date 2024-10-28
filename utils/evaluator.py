@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+from tqdm import tqdm
 
 class Evaluator:
     def __init__(self):
@@ -34,5 +36,26 @@ class Evaluator:
         pass
 
     def model_evaluate(self, model, dataloader):
-        pass
+        loss = []
+        p = []
+        r = []
+        f1 = []
+        ppa = []
+        error_value_list = []
+        print('validating......\n')
+        with torch.no_grad():
+            for step, data in tqdm(enumerate(dataloader), total=len(dataloader)):
+                output = model(data)
+                loss.append(output['loss'].item())
+                error_value_list += output['error_value_list'].tolist()
+                r += output['r']
+                f1 += output['f1']
+                ppa += output['ppa']
+                p += output['p']
 
+        return {'loss': sum(loss) / len(loss),
+                'error_value_list': sum(error_value_list) / len(error_value_list),
+                'ppa': sum(ppa) / len(ppa),
+                'p': sum(p) / len(p),
+                'r': sum(r) / len(r),
+                'f1': sum(f1) / len(f1)}
