@@ -30,13 +30,13 @@ def train(config):
         for step, data in tqdm(enumerate(reading_order_dataloader), total=len(reading_order_dataloader)):
             # break
             output = reading_order_model(data)
-    #         loss = output['loss']
-    #         loss_all.append(loss.item())
-    #         optimizer.zero_grad()
-    #         loss.backward()
-    #         optimizer.step()
-    #
-    # print()
+            loss = output['loss']
+            loss_all.append(loss.item())
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+    print()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

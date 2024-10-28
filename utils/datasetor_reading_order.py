@@ -96,9 +96,10 @@ class ReadingOrderDataset(Dataset):
 
     def __getitem__(self, idx):
         file_path = os.path.join(self.root_path, self.file_name_list[idx])
-        annotation_list = sorted(XmlProcessor(0, file_path).get_annotation(),
-                                 key=lambda x: (int(x['paragraph_order'].split('a')[-1]),
-                                                x['reading_order']))
+        # annotation_list = sorted(XmlProcessor(0, file_path).get_annotation(),
+        #                          key=lambda x: (int(x['paragraph_order'].split('a')[-1]),
+        #                                         x['reading_order']))
+        annotation_list = XmlProcessor(0, file_path).get_annotation()
         print(len(annotation_list))
         gt_matrix, article_matrix = self.generate_gt(annotation_list)
         tokenized_result = self.get_tokenizer_result(annotation_list)
@@ -120,11 +121,11 @@ class ReadingOrderDataset(Dataset):
 
 def process_img(lang):
     if lang == 'fr':
-        root_path = r'data/AS_TrainingSet_BnF_NewsEye_v2/'
-        store_root_path = r'data/fr_reading_order/'
+        root_path = r'../data/AS_TrainingSet_BnF_NewsEye_v2/'
+        store_root_path = r'../data/fr_reading_order/'
     else:
-        root_path = r'data/AS_TrainingSet_NLF_NewsEye_v2/'
-        store_root_path = r'data/fi_reading_order/'
+        root_path = r'../data/AS_TrainingSet_NLF_NewsEye_v2/'
+        store_root_path = r'../data/fi_reading_order/'
 
     os.makedirs(store_root_path, exist_ok=True)
     file_name_list = [x for x in os.listdir(root_path) if 'xml' in x]
@@ -135,7 +136,7 @@ def process_img(lang):
         annotation_list = XmlProcessor(0, file_path).get_annotation()
         whole_fig = Image.open(file_path.replace('.xml', '.jpg')).convert('RGB')
         background = Image.new('RGB', whole_fig.size, 'black')
-        background.save(store_path + '/' + 'cls_eos.jpg')
+        background.resize((512, 512)).save(store_path + '/' + 'cls_eos.jpg')
         raw_image = np.array(whole_fig)
         gray = cv2.cvtColor(raw_image, cv2.COLOR_RGB2GRAY)
         ret, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
@@ -150,7 +151,7 @@ def process_img(lang):
         gaussian = cv2.GaussianBlur(borders, (9, 9), 0)
         edges = cv2.Canny(gaussian, 70, 150)
         background_with_sep = Image.fromarray(cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB))
-        background_with_sep.save(store_path+'/' + 'background_sep.jpg')
+        background_with_sep.resize((512, 512)).save(store_path+'/' + 'background_sep.jpg')
         # continue
         #        make benchmark:
         for annotation in annotation_list:
@@ -160,9 +161,9 @@ def process_img(lang):
             block_img = whole_fig.crop(location)
             new_background.paste(block_img, location)
             new_background_with_sep.paste(block_img, location)
-            block_img.save(store_path+'/'+str(annotation['index'])+'_benchmark.jpg')
-            new_background.save(store_path + '/' + str(annotation['index']) + '_no_sep.jpg')
-            new_background_with_sep.save(store_path + '/' + str(annotation['index']) + '_with_sep.jpg')
+            block_img.resize((512, 512)).save(store_path+'/'+str(annotation['index'])+'_benchmark.jpg')
+            new_background.resize((512, 512)).save(store_path + '/' + str(annotation['index']) + '_no_sep.jpg')
+            new_background_with_sep.resize((512, 512)).save(store_path + '/' + str(annotation['index']) + '_with_sep.jpg')
 
         # break
 
@@ -183,35 +184,35 @@ def convert_img_to_nparray(lang):
 
 if __name__ == '__main__':
     # convert_img_to_nparray(lang='fr')
-    # executor = submitit.AutoExecutor(
-    #     folder='/Utilisateurs/wsun01/logs/')# Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
-    #
-    # for lang in ['fr', 'fi']:
-    #     executor.update_parameters(
-    #         job_name='reading_'+lang,
-    #         timeout_min=2160 * 4,
-    #         # gpus_per_node=1,
-    #         cpus_per_task=10,
-    #         # mem_gb=40 * 2,
-    #         # slurm_partition='gpu-a6000',
-    #         slurm_additional_parameters={
-    #             'nodelist': 'l3icalcul09'
-    #         }
-    #     )
-    #     executor.submit(convert_img_to_nparray, lang)
+    executor = submitit.AutoExecutor(
+        folder='/Utilisateurs/wsun01/logs/')# Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
+
+    for lang in ['fi', 'fr']:
+        executor.update_parameters(
+            job_name='reading_'+lang,
+            timeout_min=2160 * 4,
+            # gpus_per_node=1,
+            cpus_per_task=30,
+            # mem_gb=40 * 2,
+            # slurm_partition='gpu-a6000',
+            slurm_additional_parameters={
+                'nodelist': 'l3icalcul09'
+            }
+        )
+        executor.submit(process_img, lang)
 
     # process_img('fr')
-    config = {'lang': r'fi',
-              'text_model_name': "dbmdz/bert-base-historic-multilingual-64k-td-cased",
-              'max_token_num': 512,
-              'device': 'cpu',
-              'use_sep_fig': True,
-              'vision_model_name': 'microsoft/trocr-base-handwritten',
-              'resize': (512, 512),
-              'is_benchmark': False,}
-    # file_path = r'../data/AS_TrainingSet_BnF_NewsEye_v2/'
-    datasetor = ReadingOrderDataset(config)
-    a = datasetor[2]
+    # config = {'lang': r'fi',
+    #           'text_model_name': "dbmdz/bert-base-historic-multilingual-64k-td-cased",
+    #           'max_token_num': 512,
+    #           'device': 'cpu',
+    #           'use_sep_fig': True,
+    #           'vision_model_name': 'microsoft/trocr-base-handwritten',
+    #           'resize': (512, 512),
+    #           'is_benchmark': False,}
+    # # file_path = r'../data/AS_TrainingSet_BnF_NewsEye_v2/'
+    # datasetor = ReadingOrderDataset(config)
+    # a = datasetor[2]
 
 
 

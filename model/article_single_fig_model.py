@@ -1,5 +1,4 @@
-from openpyxl.styles.builtins import output
-
+from utils.evaluator import Evaluator
 from model.reading_order_model import ReadingOrderModel
 import torch
 from torch.nn.functional import normalize
@@ -7,6 +6,7 @@ from torch.nn.functional import normalize
 class ArticleSingleFigModel(ReadingOrderModel):
     def __init__(self, config):
         super().__init__(config)
+        self.evaluator = Evaluator()
 
     def gt_generate(self, original_gt):
         length_record = []
@@ -31,7 +31,7 @@ class ArticleSingleFigModel(ReadingOrderModel):
 
         return torch.cat(result, dim=0)
 
-    def article_decode(self, output_linear, length_record):
+    def article_decode(self, max_index, length_record):
         def check_in(index, result):
             for result_item in result:
                 if index in result_item:
@@ -40,7 +40,6 @@ class ArticleSingleFigModel(ReadingOrderModel):
             return False
 
         result = []
-        max_index = torch.argmax(output_linear, dim=1).detach().cpu().numpy()
         for index, length in enumerate(length_record):
             if check_in(index, result):
                 continue
@@ -49,7 +48,7 @@ class ArticleSingleFigModel(ReadingOrderModel):
             if index == 0:
                 prediction = max_index[:length]
             else:
-                prediction = max_index[length[index-1]: length]
+                prediction = max_index[length_record[index-1]: length_record[index-1]+length]
 
             for prediction_index, prediction_item in enumerate(prediction):
                 if prediction_item == 0 or check_in(prediction_index+index+1, result):
@@ -78,7 +77,12 @@ class ArticleSingleFigModel(ReadingOrderModel):
         output_linear = self.linear(input_to_linear)
         gt, length_record = self.gt_generate(input['article_matirx'])
         loss = self.loss_func(output_linear, gt)
-        article_result = self.article_decode(output_linear, length_record)
+        max_index = torch.argmax(output_linear, dim=1).detach().cpu().numpy()
+        article_result = self.article_decode(max_index, length_record)
+        article_gt =  self.article_decode(gt.detach().cpu().numpy(), length_record)
+        performance = self.evaluator.evaluate(article_result, article_gt)
+        return {'loss': loss, 'performance': performance}
+
 
 
 
