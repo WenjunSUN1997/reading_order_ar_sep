@@ -55,6 +55,7 @@ class Evaluator:
 
         return {'loss': sum(loss) / len(loss),
                 'error_value_list': sum(error_value_list) / len(error_value_list),
+                'mac': 1 - sum(error_value_list) / len(error_value_list),
                 'ppa': sum(ppa) / len(ppa),
                 'p': sum(p) / len(p),
                 'r': sum(r) / len(r),

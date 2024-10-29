@@ -1,16 +1,27 @@
 import torch
 import argparse
+
+from paddle.distributed.launch.plugins.test import epoch
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from utils.datasetor_reading_order import ReadingOrderDataset
 from model.reading_order_model import ReadingOrderModel
 from utils.evaluator import Evaluator
+import os
+from datetime import datetime
 from model.article_single_fig_model import ArticleSingleFigModel
 
 torch.manual_seed(3407)
 
 def train(config):
+    log_root = 'logs/'
+    os.makedirs(log_root, exist_ok=True)
+    current_time = datetime.now().strftime("%m%d%H%M%S")
+    log_folder_path = 'logs/'+ current_time + '/'
+    os.makedirs(log_folder_path, exist_ok=True)
+    best_result = None
+    best_epoch = 0
     epoch_num = 1000
     reading_order_dataseter = ReadingOrderDataset(config)
     train_dataloader = DataLoader(reading_order_dataseter, batch_size=config['batch_size'], shuffle=False)
@@ -40,8 +51,15 @@ def train(config):
             optimizer.step()
 
         evaluate_result = model_evaluator.model_evaluate(reading_order_model, test_dataloader)
+        if best_result == None or evaluate_result['mac'] > best_result['mac']:
+            best_mac = evaluate_result['mac']
+            best_epoch = epoch_index
+            best_result = evaluate_result
+            torch.save(reading_order_model.state_dict(), log_folder_path + 'best_model.pt')
 
-    print()
+        output_string = str(epoch_index) + '\n' + str(evaluate_result) + '\n' + 'bset: \n' + str(best_epoch) +str(best_result)
+        with open(log_folder_path + 'log.txt', 'a') as f:
+            f.write(output_string)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

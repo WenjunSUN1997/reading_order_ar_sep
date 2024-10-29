@@ -2,11 +2,13 @@ from utils.evaluator import Evaluator
 from model.reading_order_model import ReadingOrderModel
 import torch
 from torch.nn.functional import normalize
+from utils.focal_loss import FocalLoss
 
 class ArticleSingleFigModel(ReadingOrderModel):
     def __init__(self, config):
         super().__init__(config)
         self.evaluator = Evaluator()
+        # self.loss_func = FocalLoss()
 
     def gt_generate(self, original_gt):
         length_record = []
