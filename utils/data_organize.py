@@ -17,7 +17,7 @@ def organize_data(lang):
         annotations = XmlProcessor(0, path).get_annotation()
         print(len(annotations))
         print('\n')
-        if len(annotations) < 150:
+        if len(annotations) < 200:
             num += 1
 
     print(len(file_list), num)

@@ -1,6 +1,6 @@
 import torch
 import argparse
-
+from model.model_factory import model_factory
 from paddle.distributed.launch.plugins.test import epoch
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -26,18 +26,22 @@ def train(config):
     reading_order_dataseter = ReadingOrderDataset(config)
     train_dataloader = DataLoader(reading_order_dataseter, batch_size=config['batch_size'], shuffle=False)
     test_dataloader = DataLoader(reading_order_dataseter, batch_size=config['batch_size'], shuffle=False)
-    reading_order_model = ArticleSingleFigModel(config)
+    reading_order_model = model_factory(config)
     reading_order_model.to(config['device'])
+    reading_order_model.half()
     model_evaluator = Evaluator()
     # reading_order_model = torch.nn.DataParallel(reading_order_model)
-    if torch.cuda.device_count() > 1:
+    if torch.cuda.device_count() > 1 and config['vision_model_name'] !='cnn':
         reading_order_model.vision_model.to('cuda:1')
-    # reading_order_model.half()
+
+    if config['half']:
+        reading_order_model.half()
+
     optimizer = torch.optim.AdamW(reading_order_model.parameters(), lr=config['lr'])
     scheduler = ReduceLROnPlateau(optimizer,
                                   mode='min',
                                   factor=0.5,
-                                  patience=1,
+                                  patience=2,
                                   verbose=True)
     loss_all = [0]
     for epoch_index in range(epoch_num):
@@ -50,7 +54,9 @@ def train(config):
             loss.backward()
             optimizer.step()
 
+        print(str(epoch_index) + str(sum(loss_all) / len(loss_all)))
         evaluate_result = model_evaluator.model_evaluate(reading_order_model, test_dataloader)
+        scheduler.step(evaluate_result['loss'])
         if best_result == None or evaluate_result['mac'] > best_result['mac']:
             best_mac = evaluate_result['mac']
             best_epoch = epoch_index
@@ -65,12 +71,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--lang", default='fr', choices=['fr', 'fi'])
     parser.add_argument("--text_model_name", default='dbmdz/bert-base-historic-multilingual-64k-td-cased')
-    parser.add_argument("--vision_model_name", default='google/vit-base-patch16-224')
-    parser.add_argument("--max_token_num", default=512, type=int)
+    parser.add_argument("--vision_model_name", default='cnn')
+    parser.add_argument("--max_token_num", default=256, type=int)
     parser.add_argument("--batch_size", default=1, type=int)
     parser.add_argument("--lr", default=5e-5, type=float)
     parser.add_argument("--device", default='cuda:0')
-    parser.add_argument("--resize", default='256,256')
+    parser.add_argument("--half", default=False, action='store_false')
+    parser.add_argument("--resize", default='512,512')
+    parser.add_argument("--goal", default='develop', choices=['develop', 'benchmark'])
     parser.add_argument("--use_sep_fig", default=False, action='store_true')
     parser.add_argument('--is_benchmark', default=False, action='store_true')
     parser.add_argument('--use_seq_background', default=False, action='store_true')

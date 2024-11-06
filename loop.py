@@ -10,7 +10,7 @@ def loop():
 if __name__ == "__main__":
     executor = submitit.AutoExecutor(folder='/Utilisateurs/wsun01/logs/')  # Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
     executor.update_parameters(
-        job_name='reading_order',
+        job_name='layout_understanding',
         timeout_min=2160 * 4,
         gpus_per_node=2,
         cpus_per_task=5,

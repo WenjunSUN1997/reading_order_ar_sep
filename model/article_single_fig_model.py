@@ -8,7 +8,7 @@ class ArticleSingleFigModel(ReadingOrderModel):
     def __init__(self, config):
         super().__init__(config)
         self.evaluator = Evaluator()
-        # self.loss_func = FocalLoss()
+        self.loss_func = FocalLoss(gamma=2, alpha=0.25, task_type='binary')
 
     def gt_generate(self, original_gt):
         length_record = []
@@ -62,14 +62,11 @@ class ArticleSingleFigModel(ReadingOrderModel):
 
         return result
 
-    def forward(self, input):
-        text_emdedding = self.lang_model(input_ids=input['input_ids'].squeeze(0),
-                                         attention_mask=input['attention_mask'].squeeze(0))['last_hidden_state']
+    def forward(self, inputs):
+        text_emdedding = self.lang_model(input_ids=inputs['input_ids'].squeeze(0),
+                                         attention_mask=inputs['attention_mask'].squeeze(0))['last_hidden_state']
         text_emdedding = torch.mean(text_emdedding, dim=1)
-        vision_emdedding = self.vision_model(input['benchmark_fig'].squeeze(0).to(self.vision_model.device))[
-            'last_hidden_state']
-        vision_emdedding = torch.mean(vision_emdedding, dim=1)
-        vision_emdedding = vision_emdedding.to(self.lang_model.device)
+        vision_emdedding = self.get_vision_embedding(inputs)
         text_embedding_after_encoder = self.text_encoder(text_emdedding)
         all_embedding = torch.cat((text_embedding_after_encoder, vision_emdedding), dim=1)
         all_embedding = normalize(all_embedding)
@@ -77,7 +74,7 @@ class ArticleSingleFigModel(ReadingOrderModel):
         input_to_linear = self.linear_input_generate(all_embedding)
         input_to_linear = normalize(input_to_linear)
         output_linear = self.linear(input_to_linear)
-        gt, length_record = self.gt_generate(input['article_matirx'])
+        gt, length_record = self.gt_generate(inputs['article_matirx'])
         loss = self.loss_func(output_linear, gt)
         max_index = torch.argmax(output_linear, dim=1).detach().cpu().numpy()
         article_result = self.article_decode(max_index, length_record)

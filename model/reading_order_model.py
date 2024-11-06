@@ -8,15 +8,20 @@ from torch.utils.data.dataloader import DataLoader
 class ReadingOrderModel(nn.Module):
     def __init__(self, config):
         super(ReadingOrderModel, self).__init__()
+        self.config = config
         self.lang_model = AutoModel.from_pretrained(config['text_model_name'])
-        self.vision_config = AutoConfig.from_pretrained(config['vision_model_name'])
-        self.vision_config.image_size = config['resize'][0]
-        # self.vision_config.num_channels = 1
-        self.vision_model = AutoModel.from_config(self.vision_config)
-        # self.vision_model = AutoModel.from_pretrained(config['vision_model_name'], torch_dtype=torch.float16)
+        if config['vision_model_name'] != 'cnn':
+            # self.vision_config = AutoConfig.from_pretrained(config['vision_model_name'])
+            # self.vision_config.image_size = config['resize'][0]
+            # self.vision_model = AutoModel.from_config(self.vision_config)
+            self.vision_model = AutoModel.from_pretrained(config['vision_model_name'], torch_dtype=torch.float16)
+            vision_dim = self.vision_model.config.hidden_size
+        else:
+            self.vision_model = torch.nn.Conv2d(in_channels=3, out_channels=1, kernel_size=30, stride=20, padding=1, bias=False)
+            vision_dim = 625
+
         self.loss_func = torch.nn.CrossEntropyLoss()
         text_dim = self.lang_model.config.hidden_size
-        vision_dim = self.vision_model.config.hidden_size
         commu_dim = text_dim + vision_dim
         if config['use_seq_background']:
             self.use_seq_background = True
@@ -26,14 +31,15 @@ class ReadingOrderModel(nn.Module):
         else:
             self.use_seq_background = False
             self.linear_dim = 2 * commu_dim
+
         self.text_encoder_layer = torch.nn.TransformerEncoderLayer(d_model=text_dim,
                                                                    nhead=4,
                                                                    batch_first=True)
         self.vision_encoder_layer = torch.nn.TransformerEncoderLayer(d_model=vision_dim,
-                                                                     nhead=4,
+                                                                     nhead=5,
                                                                      batch_first=True)
         self.commu_encoder_layer = torch.nn.TransformerEncoderLayer(d_model=commu_dim,
-                                                                     nhead=4,
+                                                                     nhead=7,
                                                                      batch_first=True)
         self.text_encoder = torch.nn.TransformerEncoder(self.text_encoder_layer,
                                                         num_layers=2)
@@ -86,14 +92,6 @@ class ReadingOrderModel(nn.Module):
 
         return rout
 
-    # def article_decode(self, output):
-    #     #TODO: decode the output, return the article result
-    #     pass
-    #
-    # def article_loss(self, output, gt):
-    #     #TODO： calculate the classification loss of article result, cross_entropy or focal loss
-    #     pass
-
     def get_embedding_by_item(self, input):
         input = {key:value.squeeze(0) for key, value in input.items()}
         block_number = input['input_ids'].shape[0]
@@ -106,12 +104,6 @@ class ReadingOrderModel(nn.Module):
             vision_embedding.append(self.vision_model(input['benchmark_fig'][block_index].unsqueeze(0))['last_hidden_state'])
 
         return torch.cat(text_embedding, dim=0), torch.cat(vision_embedding, dim=0)
-
-    # def vision_process(self, input):
-    #     pass
-    #
-    # def circle_loss(self, output):
-    #     pass
 
     def organize(self, all_embedding, background_sep_embedding=None):
         item_num, dim = all_embedding.shape
@@ -127,26 +119,45 @@ class ReadingOrderModel(nn.Module):
 
         return result
 
-    def forward(self, input):
+    def get_vision_embedding(self, inputs):
+
+        if self.config['goal'] == 'benchmark':
+            imgs = inputs['benchmark_fig'].squeeze(0)
+        else:
+            if self.use_seq_background:
+                imgs = inputs['with_sep_fig'].squeeze(0)
+            else:
+                imgs = inputs['no_sep_fig'].squeeze(0)
+
+        if self.config['vision_model_name'] != 'cnn':
+            imgs.to(self.vision_model.device)
+            vision_emdedding = self.vision_model(imgs)['last_hidden_state']
+            vision_emdedding = torch.mean(vision_emdedding, dim=1)
+            vision_emdedding = vision_emdedding.to(self.lang_model.device)
+        else:
+            vision_emdedding = self.vision_model(imgs).squeeze(1)
+            vision_emdedding = vision_emdedding.view(vision_emdedding.shape[0], -1)
+
+        return vision_emdedding
+
+    def forward(self, inputs):
         # text_embedding, vision_embedding = self.get_embedding_by_item(input)
-        text_emdedding = self.lang_model(input_ids=input['input_ids'].squeeze(0),
-                                            attention_mask=input['attention_mask'].squeeze(0))['last_hidden_state']
+        text_emdedding = self.lang_model(input_ids=inputs['input_ids'].squeeze(0),
+                                            attention_mask=inputs['attention_mask'].squeeze(0))['last_hidden_state']
         text_emdedding = torch.mean(text_emdedding, dim=1)
-        vision_emdedding = self.vision_model(input['benchmark_fig'].squeeze(0).to(self.vision_model.device))['last_hidden_state']
-        vision_emdedding = torch.mean(vision_emdedding, dim=1)
-        vision_emdedding = vision_emdedding.to(self.lang_model.device)
         text_embedding_after_encoder = self.text_encoder(text_emdedding)
+        vision_emdedding = self.get_vision_embedding(inputs)
         all_embedding = torch.cat((text_embedding_after_encoder, vision_emdedding), dim=1)
         all_embedding = self.commu_encoder(all_embedding)
         if self.use_seq_background:
-            embedding_background = self.background_vision_model(input['background_seq'].squeeze(0))['last_hidden_state']
+            embedding_background = self.background_vision_model(inputs['background_seq'].squeeze(0))['last_hidden_state']
             embedding_background = torch.mean(embedding_background, dim=1).squeeze(0)
             linear_input = self.organize(all_embedding, embedding_background)
         else:
             linear_input = self.organize(all_embedding)
 
         classification_result = self.activate(self.linear(linear_input))
-        classification_loss = self.classificaiton_loss(classification_result, input['gt_matrix'].squeeze(0))
+        classification_loss = self.classificaiton_loss(classification_result, inputs['gt_matrix'].squeeze(0))
         enter_loss = self.enter_exit_loss(classification_result)
         total_loss = classification_loss + enter_loss
         route = self.decode(classification_result)

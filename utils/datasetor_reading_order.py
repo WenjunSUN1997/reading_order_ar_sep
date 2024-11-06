@@ -13,6 +13,7 @@ import numpy as np
 
 class ReadingOrderDataset(Dataset):
     def __init__(self, config):
+        self.config = config
         self.lang = config['lang']
         if self.lang == 'fi':
             self.root_path = r'data/AS_TrainingSet_NLF_NewsEye_v2/'
@@ -26,7 +27,11 @@ class ReadingOrderDataset(Dataset):
         self.max_token_num = config['max_token_num']
         self.device = config['device']
         self.use_sep_fig = config['use_sep_fig']
-        self.vision_processor = AutoProcessor.from_pretrained(config['vision_model_name'])
+        if self.config['vision_model_name'] != 'cnn':
+            self.vision_processor = AutoProcessor.from_pretrained(config['vision_model_name'])
+        else:
+            self.vision_processor = AutoProcessor.from_pretrained('google/vit-base-patch16-224-in21k')
+
         self.vision_processor.do_resize = False
         self.resize = config['resize']
         self.is_benchmark = config['is_benchmark']
@@ -108,16 +113,21 @@ class ReadingOrderDataset(Dataset):
         gt = [x for x in range(len(annotation_list)+2)]
         gt_str =" ".join(str(x) for x in gt)
 
-        return {'input_ids': tokenized_result['input_ids'].to(self.device),
-                'attention_mask': tokenized_result['attention_mask'].to(self.device),
-                'benchmark_fig': benchmark_result['pixel_values'].to(self.device),
-                'with_sep_fig': with_sep_result['pixel_values'].to(self.device),
-                'no_sep_fig': no_sep_result['pixel_values'].to(self.device),
-                'background_seq': background_seq_result['pixel_values'].to(self.device),
-                'gt_matrix': gt_matrix.to(self.device),
-                'gt_str': torch.tensor(gt).to(self.device),
-                'article_matirx': article_matrix.to(self.device),
-                }
+        inputs =  {'input_ids': tokenized_result['input_ids'].to(self.device),
+                    'attention_mask': tokenized_result['attention_mask'].to(self.device),
+                    'benchmark_fig': benchmark_result['pixel_values'].to(self.device),
+                    'with_sep_fig': with_sep_result['pixel_values'].to(self.device),
+                    'no_sep_fig': no_sep_result['pixel_values'].to(self.device),
+                    'background_seq': background_seq_result['pixel_values'].to(self.device),
+                    'gt_matrix': gt_matrix.to(self.device),
+                    'gt_str': torch.tensor(gt).to(self.device),
+                    'article_matirx': article_matrix.to(self.device),
+                    }
+        if self.config['half']:
+            for key,item in inputs.items():
+                inputs[key] = item.half()
+
+        return inputs
 
 def process_img(lang):
     if lang == 'fr':
@@ -181,6 +191,8 @@ def convert_img_to_nparray(lang):
             img = np.array(img)
             np.save(os.path.join(store_root_path, folder, file_name.replace('.jpg', '.npy')), img)
 
+def create_dataset(lang):
+    pass
 
 if __name__ == '__main__':
     # convert_img_to_nparray(lang='fr')
