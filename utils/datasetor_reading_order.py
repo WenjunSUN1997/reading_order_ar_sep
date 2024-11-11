@@ -12,17 +12,20 @@ import math
 import numpy as np
 
 class ReadingOrderDataset(Dataset):
-    def __init__(self, config):
+    def __init__(self, config, goal):
         self.config = config
         self.lang = config['lang']
-        if self.lang == 'fi':
-            self.root_path = r'data/AS_TrainingSet_NLF_NewsEye_v2/'
-            self.img_root_path = r'data/fi_reading_order/'
-        else:
-            self.root_path = r'data/AS_TrainingSet_BnF_NewsEye_v2'
-            self.img_root_path = r'data/fr_reading_order/'
+        with open('../' + config['lang'] + '_' + goal + '_set.txt', 'r') as f:
+            self.file_name_list = f.read().split('\n')
 
-        self.file_name_list = [x for x in os.listdir(self.root_path) if 'xml' in x]
+        if self.lang == 'fi':
+            # self.root_path = r'data/AS_TrainingSet_NLF_NewsEye_v2/'
+            self.img_root_path = r'../data/fi_reading_order/'
+        else:
+            # self.root_path = r'data/AS_TrainingSet_BnF_NewsEye_v2'
+            self.img_root_path = r'../data/fr_reading_order/'
+
+        # self.file_name_list = [x for x in os.listdir(self.root_path) if 'xml' in x]
         self.tokenizer = AutoTokenizer.from_pretrained(config['text_model_name'])
         self.max_token_num = config['max_token_num']
         self.device = config['device']
@@ -100,12 +103,12 @@ class ReadingOrderDataset(Dataset):
         return len(self.file_name_list)
 
     def __getitem__(self, idx):
-        file_path = os.path.join(self.root_path, self.file_name_list[idx])
+        file_path = self.file_name_list[idx]
         # annotation_list = sorted(XmlProcessor(0, file_path).get_annotation(),
         #                          key=lambda x: (int(x['paragraph_order'].split('a')[-1]),
         #                                         x['reading_order']))
         annotation_list = XmlProcessor(0, file_path).get_annotation()
-        print(len(annotation_list))
+        # print(len(annotation_list))
         gt_matrix, article_matrix = self.generate_gt(annotation_list)
         tokenized_result = self.get_tokenizer_result(annotation_list)
         benchmark_result, with_sep_result, no_sep_result, background_seq_result = (
@@ -128,6 +131,59 @@ class ReadingOrderDataset(Dataset):
                 inputs[key] = item.half()
 
         return inputs
+
+class ArticleDataset(ReadingOrderDataset):
+    def __init__(self, config, goal):
+        super(ArticleDataset, self).__init__(config, goal)
+        self.tokenized_result, self.attention_mask_result, self.with_sep_result, self.no_sep_result, self.gt_result = self.organize_by_article_loop()
+
+    def _organize_by_article(self, annotation_list, file_path):
+        tokenized_result = []
+        attention_mask_result = []
+        benchmark_result = []
+        with_sep_result = []
+        no_sep_result = []
+        background_seq_result = []
+        gt = []
+        # gt_matrix, article_matrix = self.generate_gt(annotation_list)
+        tokenized = self.get_tokenizer_result(annotation_list)
+        benchmark, with_sep, no_sep, background_seq =  self.get_fig_result(file_path, annotation_list)
+        for index_1 in range(len(annotation_list)-1):
+            for index_2 in range(index_1+1,len(annotation_list)):
+                tokenized_result.append(torch.stack((tokenized['input_ids'][index_1], tokenized['input_ids'][index_2]), dim=0))
+                attention_mask_result.append(torch.stack((tokenized['attention_mask'][index_1], tokenized['attention_mask'][index_2])))
+                benchmark_result.append(torch.stack((benchmark['pixel_values'][index_1], benchmark['pixel_values'][index_2])))
+                with_sep_result.append(torch.stack((with_sep['pixel_values'][index_1], with_sep['pixel_values'][index_2])))
+                no_sep_result.append(torch.stack((no_sep['pixel_values'][index_1], no_sep['pixel_values'][index_2])))
+                background_seq_result.append(background_seq['pixel_values'])
+                if annotation_list[index_1]['paragraph_order'] == annotation_list[index_2]['paragraph_order']:
+                    gt.append(1)
+                else:
+                    gt.append(0)
+
+        return tokenized_result, attention_mask_result, with_sep_result, no_sep_result, background_seq_result, gt
+
+    def organize_by_article_loop(self):
+        tokenized_result = []
+        attention_mask_result = []
+        gt_result = []
+        with_sep_result = []
+        no_sep_result = []
+        for file_path in tqdm(self.file_name_list):
+            annotation_list = XmlProcessor(0, '../'+file_path).get_annotation()
+            (tokenized_this_article, attention_mask_this_article,
+             with_sep_this_article, no_sep_this_article,
+             background_seq_this_article, gt_this_article) = self._organize_by_article(annotation_list, file_path)
+            tokenized_result += tokenized_this_article
+            attention_mask_result += attention_mask_this_article
+            with_sep_result += with_sep_this_article
+            no_sep_result += no_sep_this_article
+            gt_result += gt_this_article
+        return tokenized_result, attention_mask_result, with_sep_result, no_sep_result, gt_result
+
+
+    def __getitem__(self, idx):
+        retult = self.organize_by_article_loop()
 
 def process_img(lang):
     if lang == 'fr':
@@ -177,6 +233,7 @@ def process_img(lang):
 
         # break
 
+
 def convert_img_to_nparray(lang):
     if lang == 'fr':
         store_root_path = r'../data/fr_reading_order/'
@@ -196,35 +253,35 @@ def create_dataset(lang):
 
 if __name__ == '__main__':
     # convert_img_to_nparray(lang='fr')
-    executor = submitit.AutoExecutor(
-        folder='/Utilisateurs/wsun01/logs/')# Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
-
-    for lang in ['fi', 'fr']:
-        executor.update_parameters(
-            job_name='reading_'+lang,
-            timeout_min=2160 * 4,
-            # gpus_per_node=1,
-            cpus_per_task=30,
-            # mem_gb=40 * 2,
-            # slurm_partition='gpu-a6000',
-            slurm_additional_parameters={
-                'nodelist': 'l3icalcul09'
-            }
-        )
-        executor.submit(process_img, lang)
+    # executor = submitit.AutoExecutor(
+    #     folder='/Utilisateurs/wsun01/logs/')# Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
+    #
+    # for lang in ['fi', 'fr']:
+    #     executor.update_parameters(
+    #         job_name='reading_'+lang,
+    #         timeout_min=2160 * 4,
+    #         # gpus_per_node=1,
+    #         cpus_per_task=30,
+    #         # mem_gb=40 * 2,
+    #         # slurm_partition='gpu-a6000',
+    #         slurm_additional_parameters={
+    #             'nodelist': 'l3icalcul09'
+    #         }
+    #     )
+    #     executor.submit(process_img, lang)
 
     # process_img('fr')
-    # config = {'lang': r'fi',
-    #           'text_model_name': "dbmdz/bert-base-historic-multilingual-64k-td-cased",
-    #           'max_token_num': 512,
-    #           'device': 'cpu',
-    #           'use_sep_fig': True,
-    #           'vision_model_name': 'microsoft/trocr-base-handwritten',
-    #           'resize': (512, 512),
-    #           'is_benchmark': False,}
-    # # file_path = r'../data/AS_TrainingSet_BnF_NewsEye_v2/'
-    # datasetor = ReadingOrderDataset(config)
-    # a = datasetor[2]
+    config = {'lang': r'fi',
+              'text_model_name': "dbmdz/bert-base-historic-multilingual-64k-td-cased",
+              'max_token_num': 512,
+              'device': 'cpu',
+              'use_sep_fig': True,
+              'vision_model_name': 'microsoft/trocr-base-handwritten',
+              'resize': (512, 512),
+              'is_benchmark': False,}
+    # file_path = r'../data/AS_TrainingSet_BnF_NewsEye_v2/'
+    datasetor = ArticleDataset(config, 'training')
+    a = datasetor[2]
 
 
 

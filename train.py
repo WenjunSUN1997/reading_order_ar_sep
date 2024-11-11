@@ -1,16 +1,13 @@
 import torch
 import argparse
 from model.model_factory import model_factory
-from paddle.distributed.launch.plugins.test import epoch
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from utils.datasetor_reading_order import ReadingOrderDataset
-from model.reading_order_model import ReadingOrderModel
 from utils.evaluator import Evaluator
 import os
 from datetime import datetime
-from model.article_single_fig_model import ArticleSingleFigModel
 
 torch.manual_seed(3407)
 
@@ -23,12 +20,12 @@ def train(config):
     best_result = None
     best_epoch = 0
     epoch_num = 1000
-    reading_order_dataseter = ReadingOrderDataset(config)
-    train_dataloader = DataLoader(reading_order_dataseter, batch_size=config['batch_size'], shuffle=False)
-    test_dataloader = DataLoader(reading_order_dataseter, batch_size=config['batch_size'], shuffle=False)
+    training_dataseter = ReadingOrderDataset(config, goal='training')
+    test_dataseter = ReadingOrderDataset(config, goal='test')
+    train_dataloader = DataLoader(training_dataseter, batch_size=config['batch_size'], shuffle=False)
+    test_dataloader = DataLoader(test_dataseter, batch_size=config['batch_size'], shuffle=False)
     reading_order_model = model_factory(config)
     reading_order_model.to(config['device'])
-    reading_order_model.half()
     model_evaluator = Evaluator()
     # reading_order_model = torch.nn.DataParallel(reading_order_model)
     if torch.cuda.device_count() > 1 and config['vision_model_name'] !='cnn':
@@ -76,16 +73,21 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", default=1, type=int)
     parser.add_argument("--lr", default=5e-5, type=float)
     parser.add_argument("--device", default='cuda:0')
-    parser.add_argument("--half", default=False, action='store_false')
+    parser.add_argument("--half", default='0')
     parser.add_argument("--resize", default='512,512')
     parser.add_argument("--goal", default='develop', choices=['develop', 'benchmark'])
-    parser.add_argument("--use_sep_fig", default=False, action='store_true')
+    parser.add_argument("--use_sep_fig", default=False)
     parser.add_argument('--is_benchmark', default=False, action='store_true')
     parser.add_argument('--use_seq_background', default=False, action='store_true')
     args = parser.parse_args()
     print(args)
     config = vars(args)
     config['resize'] = tuple(map(int, config['resize'].split(',')))
+    if config['half'] == '1':
+        config['half'] = True
+    else:
+        config['half'] = False
+
     train(config)
 
     # config = {'lang': r'fi',

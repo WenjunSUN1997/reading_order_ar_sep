@@ -12,7 +12,7 @@ if __name__ == "__main__":
     executor.update_parameters(
         job_name='layout_understanding',
         timeout_min=2160 * 4,
-        gpus_per_node=2,
+        gpus_per_node=1,
         cpus_per_task=5,
         mem_gb=90 * 2,
         # slurm_partition='gpu-a6000',
