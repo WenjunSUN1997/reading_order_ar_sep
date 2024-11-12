@@ -147,7 +147,7 @@ class ArticleDataset(DatasetPrototype):
         index_content_dict = {}
         index = 0
         for file_path in tqdm(self.file_name_list):
-            annotation_list = XmlProcessor(0, '../' + file_path).get_annotation()
+            annotation_list = XmlProcessor(0, file_path).get_annotation()
             img_folder = os.path.join(self.img_root_path, file_path.split('/')[-1].replace('.xml', '/'))
             for index_1 in range(len(annotation_list)-1):
                 for index_2 in range(index_1+1, len(annotation_list)):

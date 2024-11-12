@@ -78,27 +78,6 @@ class ReadingOrderModel(ModlePrototype):
 
         return result
 
-    def get_vision_embedding(self, inputs):
-
-        if self.config['goal'] == 'benchmark':
-            imgs = inputs['benchmark_fig'].squeeze(0)
-        else:
-            if self.use_seq_background:
-                imgs = inputs['with_sep_fig'].squeeze(0)
-            else:
-                imgs = inputs['no_sep_fig'].squeeze(0)
-
-        if self.config['vision_model_name'] != 'cnn':
-            imgs.to(self.vision_model.device)
-            vision_emdedding = self.vision_model(imgs)['last_hidden_state']
-            vision_emdedding = torch.mean(vision_emdedding, dim=1)
-            vision_emdedding = vision_emdedding.to(self.lang_model.device)
-        else:
-            vision_emdedding = self.vision_model(imgs).squeeze(1)
-            vision_emdedding = vision_emdedding.view(vision_emdedding.shape[0], -1)
-
-        return vision_emdedding
-
     def forward(self, inputs):
         # text_embedding, vision_embedding = self.get_embedding_by_item(input)
         text_emdedding = self.lang_model(input_ids=inputs['input_ids'].squeeze(0),

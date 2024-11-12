@@ -64,6 +64,12 @@ class ArticleSingleFigModel(ModlePrototype):
         return result
 
     def forward(self, inputs):
+        for key, value in inputs.items():
+            if 'fig' not in key or 'gt' in key:
+                inputs[key] = value.view(-1, value.size(-1))
+            else:
+                inputs[key] = value.view(value.size(0)*value.size(1), value.size(2), value.size(3), value.size(4))
+
         text_emdedding = self.lang_model(input_ids=inputs['input_ids'].squeeze(0),
                                          attention_mask=inputs['attention_mask'].squeeze(0))['last_hidden_state']
         text_emdedding = torch.mean(text_emdedding, dim=1)

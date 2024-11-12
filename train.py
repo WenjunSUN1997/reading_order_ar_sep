@@ -4,7 +4,7 @@ from model.model_factory import model_factory
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
-from utils.datasetor_reading_order import ReadingOrderDataset
+from utils.datasetor_reading_order import ReadingOrderDataset, ArticleDataset
 from utils.evaluator import Evaluator
 import os
 from datetime import datetime
@@ -20,8 +20,8 @@ def train(config):
     best_result = None
     best_epoch = 0
     epoch_num = 1000
-    training_dataseter = ReadingOrderDataset(config, goal='training')
-    test_dataseter = ReadingOrderDataset(config, goal='test')
+    training_dataseter = ArticleDataset(config, goal='training')
+    test_dataseter = ArticleDataset(config, goal='test')
     train_dataloader = DataLoader(training_dataseter, batch_size=config['batch_size'], shuffle=False)
     test_dataloader = DataLoader(test_dataseter, batch_size=config['batch_size'], shuffle=False)
     reading_order_model = model_factory(config)
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     parser.add_argument("--text_model_name", default='dbmdz/bert-base-historic-multilingual-64k-td-cased')
     parser.add_argument("--vision_model_name", default='cnn')
     parser.add_argument("--max_token_num", default=256*2, type=int)
-    parser.add_argument("--batch_size", default=1, type=int)
+    parser.add_argument("--batch_size", default=4, type=int)
     parser.add_argument("--lr", default=5e-5, type=float)
     parser.add_argument("--device", default='cuda:0')
     parser.add_argument("--half", default='0')
