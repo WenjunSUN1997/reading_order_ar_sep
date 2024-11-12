@@ -3,6 +3,8 @@ import submitit
 import copy
 from torch.utils.data import Dataset
 from tqdm import tqdm
+
+from benchmark.xycut import benchmark
 from utils.xml_reader import XmlProcessor
 import os
 from transformers import AutoTokenizer,  AutoProcessor
@@ -11,19 +13,19 @@ import cv2
 import math
 import numpy as np
 
-class ReadingOrderDataset(Dataset):
+class DatasetPrototype(Dataset):
     def __init__(self, config, goal):
         self.config = config
         self.lang = config['lang']
-        with open('../' + config['lang'] + '_' + goal + '_set.txt', 'r') as f:
-            self.file_name_list = f.read().split('\n')
+        with open(config['lang'] + '_' + goal + '_set.txt', 'r') as f:
+            self.file_name_list = f.read().split('\n')[:-1]
 
         if self.lang == 'fi':
             # self.root_path = r'data/AS_TrainingSet_NLF_NewsEye_v2/'
-            self.img_root_path = r'../data/fi_reading_order/'
+            self.img_root_path = r'data/fi_reading_order/'
         else:
             # self.root_path = r'data/AS_TrainingSet_BnF_NewsEye_v2'
-            self.img_root_path = r'../data/fr_reading_order/'
+            self.img_root_path = r'data/fr_reading_order/'
 
         # self.file_name_list = [x for x in os.listdir(self.root_path) if 'xml' in x]
         self.tokenizer = AutoTokenizer.from_pretrained(config['text_model_name'])
@@ -38,6 +40,10 @@ class ReadingOrderDataset(Dataset):
         self.vision_processor.do_resize = False
         self.resize = config['resize']
         self.is_benchmark = config['is_benchmark']
+
+class ReadingOrderDataset(DatasetPrototype):
+    def __init__(self, config, goal):
+        super(ReadingOrderDataset, self).__init__(config, goal)
 
     def get_tokenizer_result(self, annotation_list):
         text_list = [x['text'] for x in annotation_list]
@@ -132,58 +138,58 @@ class ReadingOrderDataset(Dataset):
 
         return inputs
 
-class ArticleDataset(ReadingOrderDataset):
+class ArticleDataset(DatasetPrototype):
     def __init__(self, config, goal):
         super(ArticleDataset, self).__init__(config, goal)
-        self.tokenized_result, self.attention_mask_result, self.with_sep_result, self.no_sep_result, self.gt_result = self.organize_by_article_loop()
+        self.data_grouped_index = self._organize_by_index()
 
-    def _organize_by_article(self, annotation_list, file_path):
-        tokenized_result = []
-        attention_mask_result = []
-        benchmark_result = []
-        with_sep_result = []
-        no_sep_result = []
-        background_seq_result = []
-        gt = []
-        # gt_matrix, article_matrix = self.generate_gt(annotation_list)
-        tokenized = self.get_tokenizer_result(annotation_list)
-        benchmark, with_sep, no_sep, background_seq =  self.get_fig_result(file_path, annotation_list)
-        for index_1 in range(len(annotation_list)-1):
-            for index_2 in range(index_1+1,len(annotation_list)):
-                tokenized_result.append(torch.stack((tokenized['input_ids'][index_1], tokenized['input_ids'][index_2]), dim=0))
-                attention_mask_result.append(torch.stack((tokenized['attention_mask'][index_1], tokenized['attention_mask'][index_2])))
-                benchmark_result.append(torch.stack((benchmark['pixel_values'][index_1], benchmark['pixel_values'][index_2])))
-                with_sep_result.append(torch.stack((with_sep['pixel_values'][index_1], with_sep['pixel_values'][index_2])))
-                no_sep_result.append(torch.stack((no_sep['pixel_values'][index_1], no_sep['pixel_values'][index_2])))
-                background_seq_result.append(background_seq['pixel_values'])
-                if annotation_list[index_1]['paragraph_order'] == annotation_list[index_2]['paragraph_order']:
-                    gt.append(1)
-                else:
-                    gt.append(0)
-
-        return tokenized_result, attention_mask_result, with_sep_result, no_sep_result, background_seq_result, gt
-
-    def organize_by_article_loop(self):
-        tokenized_result = []
-        attention_mask_result = []
-        gt_result = []
-        with_sep_result = []
-        no_sep_result = []
+    def _organize_by_index(self):
+        index_content_dict = {}
+        index = 0
         for file_path in tqdm(self.file_name_list):
-            annotation_list = XmlProcessor(0, '../'+file_path).get_annotation()
-            (tokenized_this_article, attention_mask_this_article,
-             with_sep_this_article, no_sep_this_article,
-             background_seq_this_article, gt_this_article) = self._organize_by_article(annotation_list, file_path)
-            tokenized_result += tokenized_this_article
-            attention_mask_result += attention_mask_this_article
-            with_sep_result += with_sep_this_article
-            no_sep_result += no_sep_this_article
-            gt_result += gt_this_article
-        return tokenized_result, attention_mask_result, with_sep_result, no_sep_result, gt_result
+            annotation_list = XmlProcessor(0, '../' + file_path).get_annotation()
+            img_folder = os.path.join(self.img_root_path, file_path.split('/')[-1].replace('.xml', '/'))
+            for index_1 in range(len(annotation_list)-1):
+                for index_2 in range(index_1+1, len(annotation_list)):
+                    text = [annotation_list[index_1]['text'], annotation_list[index_2]['text']]
+                    benchmark = [img_folder + str(annotation_list[index_1]['index']) + '_benchmark.jpg',
+                                 img_folder + str(annotation_list[index_2]['index']) + '_benchmark.jpg']
+                    with_sep =  [img_folder + str(annotation_list[index_1]['index']) + '_with_sep.jpg',
+                                 img_folder + str(annotation_list[index_2]['index']) + '_with_sep.jpg']
+                    no_sep = [img_folder + str(annotation_list[index_1]['index']) + '_no_sep.jpg',
+                              img_folder + str(annotation_list[index_2]['index']) + '_no_sep.jpg']
+                    gt =1 if annotation_list[index_1]['paragraph_order'] == annotation_list[index_2]['paragraph_order'] else 0
+                    index_content_dict[index] = {'text': text, 'benchmark': benchmark, 'with_sep': with_sep, 'no_sep': no_sep, 'gt':gt}
+                    index += 1
 
+        return index_content_dict
+
+    def __len__(self):
+        return len(self.data_grouped_index)
 
     def __getitem__(self, idx):
-        retult = self.organize_by_article_loop()
+        data = self.data_grouped_index[idx]
+        tokenize_result = self.tokenizer(data['text'],
+                                         max_length=self.max_token_num,
+                                         truncation=True,
+                                         return_tensors='pt',
+                                         padding='max_length')
+        benchmark_0 = Image.open(data['benchmark'][0]).convert('RGB').resize(self.resize)
+        benchmark_1 = Image.open(data['benchmark'][1]).convert('RGB').resize(self.resize)
+        benchmark_result = self.vision_processor([benchmark_0, benchmark_1], return_tensors="pt", do_resize=False)
+        with_sep_0 = Image.open(data['with_sep'][0]).convert('RGB').resize(self.resize)
+        with_sep_1 = Image.open(data['with_sep'][1]).convert('RGB').resize(self.resize)
+        with_sep_result = self.vision_processor([with_sep_0, with_sep_1], return_tensors="pt", do_resize=False)
+        no_sep_0 = Image.open(data['no_sep'][0]).convert('RGB').resize(self.resize)
+        no_sep_1 = Image.open(data['no_sep'][1]).convert('RGB').resize(self.resize)
+        no_sep_result = self.vision_processor([no_sep_0, no_sep_1], return_tensors="pt", do_resize=False)
+        return {'input_ids': tokenize_result['input_ids'].to(self.device),
+                'attention_mask': tokenize_result['attention_mask'].to(self.device),
+                'benchmark_fig': benchmark_result['pixel_values'].to(self.device),
+                'with_sep_fig': with_sep_result['pixel_values'].to(self.device),
+                'no_sep_fig': no_sep_result['pixel_values'].to(self.device),
+                'gt': torch.tensor(data['gt']).to(self.device)
+                }
 
 def process_img(lang):
     if lang == 'fr':
@@ -232,7 +238,6 @@ def process_img(lang):
             new_background_with_sep.resize((512, 512)).save(store_path + '/' + str(annotation['index']) + '_with_sep.jpg')
 
         # break
-
 
 def convert_img_to_nparray(lang):
     if lang == 'fr':
@@ -283,6 +288,47 @@ if __name__ == '__main__':
     datasetor = ArticleDataset(config, 'training')
     a = datasetor[2]
 
-
-
-
+   # def _organize_by_article(self, annotation_list, file_path):
+   #      tokenized_result = []
+   #      attention_mask_result = []
+   #      benchmark_result = []
+   #      with_sep_result = []
+   #      no_sep_result = []
+   #      background_seq_result = []
+   #      gt = []
+   #      # gt_matrix, article_matrix = self.generate_gt(annotation_list)
+   #      tokenized = self.get_tokenizer_result(annotation_list)
+   #      benchmark, with_sep, no_sep, background_seq =  self.get_fig_result(file_path, annotation_list)
+   #      for index_1 in range(len(annotation_list)-1):
+   #          for index_2 in range(index_1+1,len(annotation_list)):
+   #              tokenized_result.append(torch.stack((tokenized['input_ids'][index_1], tokenized['input_ids'][index_2]), dim=0))
+   #              attention_mask_result.append(torch.stack((tokenized['attention_mask'][index_1], tokenized['attention_mask'][index_2])))
+   #              benchmark_result.append(torch.stack((benchmark['pixel_values'][index_1], benchmark['pixel_values'][index_2])))
+   #              with_sep_result.append(torch.stack((with_sep['pixel_values'][index_1], with_sep['pixel_values'][index_2])))
+   #              no_sep_result.append(torch.stack((no_sep['pixel_values'][index_1], no_sep['pixel_values'][index_2])))
+   #              background_seq_result.append(background_seq['pixel_values'])
+   #              if annotation_list[index_1]['paragraph_order'] == annotation_list[index_2]['paragraph_order']:
+   #                  gt.append(1)
+   #              else:
+   #                  gt.append(0)
+   #
+   #      return tokenized_result, attention_mask_result, with_sep_result, no_sep_result, background_seq_result, gt
+   #
+   #  def _organize_by_article_loop(self):
+#         tokenized_result = []
+#         attention_mask_result = []
+#         gt_result = []
+#         with_sep_result = []
+#         no_sep_result = []
+#         for file_path in tqdm(self.file_name_list):
+#             annotation_list = XmlProcessor(0, '../'+file_path).get_annotation()
+#             (tokenized_this_article, attention_mask_this_article,
+#              with_sep_this_article, no_sep_this_article,
+#              background_seq_this_article, gt_this_article) = self._organize_by_article(annotation_list, file_path)
+#             tokenized_result += tokenized_this_article
+#             attention_mask_result += attention_mask_this_article
+#             with_sep_result += with_sep_this_article
+#             no_sep_result += no_sep_this_article
+#             gt_result += gt_this_article
+#         return tokenized_result, attention_mask_result, with_sep_result, no_sep_result, gt_result
+   #

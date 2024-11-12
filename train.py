@@ -28,8 +28,8 @@ def train(config):
     reading_order_model.to(config['device'])
     model_evaluator = Evaluator()
     # reading_order_model = torch.nn.DataParallel(reading_order_model)
-    if torch.cuda.device_count() > 1 and config['vision_model_name'] !='cnn':
-        reading_order_model.vision_model.to('cuda:1')
+    # if torch.cuda.device_count() > 1 and config['vision_model_name'] !='cnn':
+    #     reading_order_model.vision_model.to('cuda:1')
 
     if config['half']:
         reading_order_model.half()
@@ -40,7 +40,7 @@ def train(config):
                                   factor=0.5,
                                   patience=2,
                                   verbose=True)
-    loss_all = [0]
+    loss_all = []
     for epoch_index in range(epoch_num):
         for step, data in tqdm(enumerate(train_dataloader), total=len(train_dataloader)):
             # break
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("--lang", default='fr', choices=['fr', 'fi'])
     parser.add_argument("--text_model_name", default='dbmdz/bert-base-historic-multilingual-64k-td-cased')
     parser.add_argument("--vision_model_name", default='cnn')
-    parser.add_argument("--max_token_num", default=256, type=int)
+    parser.add_argument("--max_token_num", default=256*2, type=int)
     parser.add_argument("--batch_size", default=1, type=int)
     parser.add_argument("--lr", default=5e-5, type=float)
     parser.add_argument("--device", default='cuda:0')

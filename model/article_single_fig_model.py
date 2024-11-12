@@ -3,10 +3,11 @@ from model.reading_order_model import ReadingOrderModel
 import torch
 from torch.nn.functional import normalize
 from utils.focal_loss import FocalLoss
+from model.model_prototype import ModlePrototype
 
-class ArticleSingleFigModel(ReadingOrderModel):
+class ArticleSingleFigModel(ModlePrototype):
     def __init__(self, config):
-        super().__init__(config)
+        super(ArticleSingleFigModel, self).__init__(config)
         self.evaluator = Evaluator()
         self.loss_func = FocalLoss(gamma=2, alpha=0.25, task_type='binary')
 
