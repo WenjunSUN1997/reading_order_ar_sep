@@ -1,3 +1,5 @@
+from nipype.interfaces.minc.tests.test_auto_Volcentre import test_Volcentre_inputs
+
 from utils.evaluator import Evaluator
 from model.reading_order_model import ReadingOrderModel
 import torch
@@ -72,14 +74,16 @@ class ArticleSingleFigModel(ModlePrototype):
 
         text_emdedding = self.lang_model(input_ids=inputs['input_ids'].squeeze(0),
                                          attention_mask=inputs['attention_mask'].squeeze(0))['last_hidden_state']
-        text_emdedding = torch.mean(text_emdedding, dim=1)
-        vision_emdedding = self.get_vision_embedding(inputs)
         text_embedding_after_encoder = self.text_encoder(text_emdedding)
+        text_embedding_after_encoder = torch.mean(text_embedding_after_encoder, dim=1)
+        vision_emdedding = self.get_vision_embedding(inputs)
+        # text_embedding_after_encoder = self.text_encoder(text_emdedding)
         all_embedding = torch.cat((text_embedding_after_encoder, vision_emdedding), dim=1)
-        all_embedding = normalize(all_embedding)
+        all_embedding = self.layer_norm(all_embedding)
         all_embedding = self.commu_encoder(all_embedding)
+        # input_to_linear = self.linear_input_generate(all_embedding)
+        # input_to_linear = normalize(input_to_linear)
         input_to_linear = self.linear_input_generate(all_embedding)
-        input_to_linear = normalize(input_to_linear)
         output_linear = self.linear(input_to_linear)
         gt, length_record = self.gt_generate(inputs['article_matirx'])
         loss = self.loss_func(output_linear, gt)

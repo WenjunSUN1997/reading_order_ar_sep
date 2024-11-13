@@ -24,6 +24,7 @@ class ModlePrototype(nn.Module):
         self.loss_func = torch.nn.CrossEntropyLoss()
         text_dim = self.lang_model.config.hidden_size
         commu_dim = text_dim + vision_dim
+        self.layer_norm = nn.LayerNorm(commu_dim)
         if config['use_seq_background']:
             self.use_seq_background = True
             self.background_vision_model = AutoModel.from_pretrained(config['vision_model_name'])

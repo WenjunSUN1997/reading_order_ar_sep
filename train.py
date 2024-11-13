@@ -70,7 +70,7 @@ if __name__ == "__main__":
     parser.add_argument("--text_model_name", default='dbmdz/bert-base-historic-multilingual-64k-td-cased')
     parser.add_argument("--vision_model_name", default='cnn')
     parser.add_argument("--max_token_num", default=256*2, type=int)
-    parser.add_argument("--batch_size", default=4, type=int)
+    parser.add_argument("--batch_size", default=8, type=int)
     parser.add_argument("--lr", default=5e-5, type=float)
     parser.add_argument("--device", default='cuda:0')
     parser.add_argument("--half", default='0')
