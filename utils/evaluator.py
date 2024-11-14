@@ -41,8 +41,51 @@ class Evaluator:
                 'r': [r],
                 'f1': [f1]}
 
-    def get_gt(self, input):
-        pass
+    def gt_generate(self, original_gt):
+        length_record = []
+        result = []
+        gt_matrix = original_gt
+        begin = 0
+        for index_1 in range(len(gt_matrix) - 1):
+            end = 0
+            for index_2 in range(index_1 + 1, len(gt_matrix)):
+                result.append(gt_matrix[index_1, index_2])
+                end += 1
+
+            length_record.append([begin, begin+end])
+            begin = begin+end
+
+        result = torch.stack(result)
+        return result, length_record
+
+    def article_decode(self, max_index, length_record):
+        def check_in(index, result):
+            for result_item in result:
+                if index in result_item:
+                    return True
+
+            return False
+
+        result = []
+        for index, length in enumerate(length_record):
+            if check_in(index, result):
+                continue
+
+            result_item = [index]
+            prediction = max_index[length[0]: length[1]]
+
+            for prediction_index, prediction_item in enumerate(prediction):
+                if prediction_item == 0 or check_in(prediction_index+index+1, result):
+                    continue
+                else:
+                    result_item.append(prediction_index+index+1)
+
+            result.append(result_item)
+
+        if not check_in(length_record[0][1], result):
+            result.append([length_record[0][1]])
+
+        return result
 
     def _inner_test_loop(self, model, dataloader):
         loss_this_article = []
@@ -51,8 +94,11 @@ class Evaluator:
             for _, data in enumerate(dataloader):
                 output = model(data)
                 output_this_article += torch.max(output['output'], dim=1).indices.detach().cpu().numpy().tolist()
-                loss_this_article.append(output['loss'].item)
+                loss_this_article.append(output['loss'].item())
 
+        gt, length_record = self.gt_generate(data['gt_matrix'])
+        article_gt = self.article_decode(gt.cpu().detach().numpy().tolist(), length_record)
+        article_prediction = self.article_decode(output_this_article, length_record)
         return loss_this_article, output_this_article
 
     def __call__(self, model):
