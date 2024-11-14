@@ -1,9 +1,6 @@
 import torch
 import torch.nn as nn
-import numpy as np
 from transformers import AutoModel, AutoConfig
-from utils.datasetor_reading_order import ReadingOrderDataset
-from torch.utils.data.dataloader import DataLoader
 
 class ModlePrototype(nn.Module):
     def __init__(self, config):
@@ -51,7 +48,7 @@ class ModlePrototype(nn.Module):
                                                          num_layers=2)
         # self.normal = torch.nn.LayerNorm(self.linear_dim)
         self.linear = torch.nn.Linear(self.linear_dim, 2)
-        self.activate = nn.Softmax(dim=-1)
+        self.activate = nn.Sigmoid()
 
     def get_vision_embedding(self, inputs):
         if self.config['goal'] == 'benchmark':

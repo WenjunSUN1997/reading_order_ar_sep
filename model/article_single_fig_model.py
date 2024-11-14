@@ -1,16 +1,12 @@
-from nipype.interfaces.minc.tests.test_auto_Volcentre import test_Volcentre_inputs
-
 from utils.evaluator import Evaluator
-from model.reading_order_model import ReadingOrderModel
 import torch
-from torch.nn.functional import normalize
 from utils.focal_loss import FocalLoss
 from model.model_prototype import ModlePrototype
 
 class ArticleSingleFigModel(ModlePrototype):
     def __init__(self, config):
         super(ArticleSingleFigModel, self).__init__(config)
-        self.evaluator = Evaluator()
+        # self.evaluator = Evaluator()
         self.loss_func = FocalLoss(gamma=2, alpha=0.25, task_type='binary')
 
     def gt_generate(self, original_gt):
@@ -83,15 +79,18 @@ class ArticleSingleFigModel(ModlePrototype):
         all_embedding = self.commu_encoder(all_embedding)
         # input_to_linear = self.linear_input_generate(all_embedding)
         # input_to_linear = normalize(input_to_linear)
-        input_to_linear = self.linear_input_generate(all_embedding)
+        input_to_linear = all_embedding.view(int(all_embedding.size(0)/2) , -1)
         output_linear = self.linear(input_to_linear)
-        gt, length_record = self.gt_generate(inputs['article_matirx'])
-        loss = self.loss_func(output_linear, gt)
-        max_index = torch.argmax(output_linear, dim=1).detach().cpu().numpy()
-        article_result = self.article_decode(max_index, length_record)
-        article_gt =  self.article_decode(gt.detach().cpu().numpy(), length_record)
-        performance = self.evaluator.evaluate_single_page(article_result, article_gt)
-        return {'loss': loss, 'performance': performance}
+        output_linear = self.activate(output_linear)
+        loss = self.loss_func(output_linear, inputs['gt'].squeeze(0))
+        return {'loss': loss, 'output': output_linear}
+        # gt, length_record = self.gt_generate(inputs['article_matirx'])
+
+        # max_index = torch.argmax(output_linear, dim=1).detach().cpu().numpy()
+        # article_result = self.article_decode(max_index, length_record)
+        # article_gt =  self.article_decode(gt.detach().cpu().numpy(), length_record)
+        # performance = self.evaluator.evaluate_single_page(article_result, article_gt)
+
 
 
 

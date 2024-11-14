@@ -1,10 +1,19 @@
 import numpy as np
 import torch
+from openpyxl.styles.builtins import output
 from tqdm import tqdm
+from torch.utils.data import DataLoader
+from utils.datasetor_reading_order import ArticleDataset
 
 class Evaluator:
-    def __init__(self):
-        pass
+    def __init__(self,config):
+        with open(config['lang'] + '_test_set.txt', 'r') as f:
+            self.file_name_list = f.read().split('\n')[:-1]
+
+        self.dataloader_list = [DataLoader(ArticleDataset(config, 'test', file_name),
+                                           batch_size=config['batch_size'],
+                                           shuffle=False)
+                                for file_name in self.file_name_list]
 
     def evaluate_single_page(self, prediction, truth):
         correct_num = 0
@@ -35,6 +44,23 @@ class Evaluator:
     def get_gt(self, input):
         pass
 
+    def _inner_test_loop(self, model, dataloader):
+        loss_this_article = []
+        output_this_article = []
+        with torch.no_grad():
+            for _, data in enumerate(dataloader):
+                output = model(data)
+                output_this_article += torch.max(output['output'], dim=1).indices.detach().cpu().numpy().tolist()
+                loss_this_article.append(output['loss'].item)
+
+        return loss_this_article, output_this_article
+
+    def __call__(self, model):
+        loss = []
+        for dataloader in tqdm(self.dataloader_list):
+            loss_this_article, output_this_article = self._inner_test_loop(model, dataloader)
+            loss += loss_this_article
+
     def model_evaluate(self, model, dataloader):
         loss = []
         p = []
@@ -60,3 +86,4 @@ class Evaluator:
                 'p': sum(p) / len(p),
                 'r': sum(r) / len(r),
                 'f1': sum(f1) / len(f1)}
+

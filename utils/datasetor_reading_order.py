@@ -14,11 +14,14 @@ import math
 import numpy as np
 
 class DatasetPrototype(Dataset):
-    def __init__(self, config, goal):
+    def __init__(self, config, goal, file_name=None):
         self.config = config
         self.lang = config['lang']
-        with open(config['lang'] + '_' + goal + '_set.txt', 'r') as f:
-            self.file_name_list = f.read().split('\n')[:-1]
+        if goal == 'training':
+            with open(config['lang'] + '_' + goal + '_set.txt', 'r') as f:
+                self.file_name_list = f.read().split('\n')[:-1]
+        else:
+            self.file_name_list = [file_name]
 
         if self.lang == 'fi':
             # self.root_path = r'data/AS_TrainingSet_NLF_NewsEye_v2/'
@@ -40,6 +43,31 @@ class DatasetPrototype(Dataset):
         self.vision_processor.do_resize = False
         self.resize = config['resize']
         self.is_benchmark = config['is_benchmark']
+
+    def generate_gt(self, annotation_list):
+        length = len(annotation_list) + 2
+        result = []
+        end = 1
+        for i in range(length-1):
+            temp = [0] * length
+            temp[end] = 1
+            end += 1
+            result.append(temp)
+
+        result.append([0] * length)
+        result = torch.tensor(result).to(self.device)
+        article_matrix = []
+        for annotation in annotation_list:
+            matrix_this_item = []
+            for i in range(len(annotation_list)):
+                if annotation['paragraph_order'] == annotation_list[i]['paragraph_order']:
+                    matrix_this_item.append(1)
+                else:
+                    matrix_this_item.append(0)
+            article_matrix.append(matrix_this_item)
+
+        article_matrix = torch.tensor(article_matrix).to(self.device)
+        return result, article_matrix
 
 class ReadingOrderDataset(DatasetPrototype):
     def __init__(self, config, goal):
@@ -80,31 +108,6 @@ class ReadingOrderDataset(DatasetPrototype):
         no_sep_result = self.vision_processor(no_sep_result, return_tensors="pt", do_resize=False)
         return benchmark_result, with_sep_result, no_sep_result, background_seq_result
 
-    def generate_gt(self, annotation_list):
-        length = len(annotation_list) + 2
-        result = []
-        end = 1
-        for i in range(length-1):
-            temp = [0] * length
-            temp[end] = 1
-            end += 1
-            result.append(temp)
-
-        result.append([0] * length)
-        result = torch.tensor(result).to(self.device)
-        article_matrix = []
-        for annotation in annotation_list:
-            matrix_this_item = []
-            for i in range(len(annotation_list)):
-                if annotation['paragraph_order'] == annotation_list[i]['paragraph_order']:
-                    matrix_this_item.append(1)
-                else:
-                    matrix_this_item.append(0)
-            article_matrix.append(matrix_this_item)
-
-        article_matrix = torch.tensor(article_matrix).to(self.device)
-        return result, article_matrix
-
     def __len__(self):
         return len(self.file_name_list)
 
@@ -139,8 +142,8 @@ class ReadingOrderDataset(DatasetPrototype):
         return inputs
 
 class ArticleDataset(DatasetPrototype):
-    def __init__(self, config, goal):
-        super(ArticleDataset, self).__init__(config, goal)
+    def __init__(self, config, goal, file_name=None):
+        super(ArticleDataset, self).__init__(config, goal, file_name=file_name)
         self.data_grouped_index = self._organize_by_index()
 
     def _organize_by_index(self):
@@ -148,6 +151,7 @@ class ArticleDataset(DatasetPrototype):
         index = 0
         for file_path in tqdm(self.file_name_list):
             annotation_list = XmlProcessor(0, file_path).get_annotation()
+            _, article_matrix = self.generate_gt(annotation_list)
             img_folder = os.path.join(self.img_root_path, file_path.split('/')[-1].replace('.xml', '/'))
             for index_1 in range(len(annotation_list)-1):
                 for index_2 in range(index_1+1, len(annotation_list)):
@@ -159,7 +163,13 @@ class ArticleDataset(DatasetPrototype):
                     no_sep = [img_folder + str(annotation_list[index_1]['index']) + '_no_sep.jpg',
                               img_folder + str(annotation_list[index_2]['index']) + '_no_sep.jpg']
                     gt =1 if annotation_list[index_1]['paragraph_order'] == annotation_list[index_2]['paragraph_order'] else 0
-                    index_content_dict[index] = {'text': text, 'benchmark': benchmark, 'with_sep': with_sep, 'no_sep': no_sep, 'gt':gt}
+                    index_content_dict[index] = {'text': text,
+                                                 'benchmark': benchmark,
+                                                 'with_sep': with_sep,
+                                                 'no_sep': no_sep,
+                                                 'gt': gt,
+                                                 'gt_matrix': article_matrix
+                                                 }
                     index += 1
 
         return index_content_dict
@@ -188,7 +198,8 @@ class ArticleDataset(DatasetPrototype):
                 'benchmark_fig': benchmark_result['pixel_values'].to(self.device),
                 'with_sep_fig': with_sep_result['pixel_values'].to(self.device),
                 'no_sep_fig': no_sep_result['pixel_values'].to(self.device),
-                'gt': torch.tensor(data['gt']).to(self.device)
+                'gt': torch.tensor(data['gt']).to(self.device),
+                'gt_matrix': torch.tensor(data['gt_matrix']).to(self.device)
                 }
 
 def process_img(lang):
@@ -200,7 +211,9 @@ def process_img(lang):
         store_root_path = r'../data/fi_reading_order/'
 
     os.makedirs(store_root_path, exist_ok=True)
-    file_name_list = [x for x in os.listdir(root_path) if 'xml' in x]
+    finished_file_list = os.listdir(store_root_path)
+    file_name_list = [x for x in os.listdir(root_path) if 'xml' in x
+                      and x.replace('.xml', '')  not in finished_file_list]
     for _, file_name in tqdm(enumerate(file_name_list), total=len(file_name_list)):
         file_path = os.path.join(root_path, file_name)
         store_path = store_root_path+file_name.replace('.xml', '')
@@ -257,36 +270,33 @@ def create_dataset(lang):
     pass
 
 if __name__ == '__main__':
-    # convert_img_to_nparray(lang='fr')
-    # executor = submitit.AutoExecutor(
-    #     folder='/Utilisateurs/wsun01/logs/')# Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
-    #
-    # for lang in ['fi', 'fr']:
-    #     executor.update_parameters(
-    #         job_name='reading_'+lang,
-    #         timeout_min=2160 * 4,
-    #         # gpus_per_node=1,
-    #         cpus_per_task=30,
-    #         # mem_gb=40 * 2,
-    #         # slurm_partition='gpu-a6000',
-    #         slurm_additional_parameters={
-    #             'nodelist': 'l3icalcul09'
-    #         }
-    #     )
-    #     executor.submit(process_img, lang)
+    process_img('fi')
+    executor = submitit.AutoExecutor(
+        folder='/Utilisateurs/wsun01/logs/')# Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
 
-    # process_img('fr')
-    config = {'lang': r'fi',
-              'text_model_name': "dbmdz/bert-base-historic-multilingual-64k-td-cased",
-              'max_token_num': 512,
-              'device': 'cpu',
-              'use_sep_fig': True,
-              'vision_model_name': 'microsoft/trocr-base-handwritten',
-              'resize': (512, 512),
-              'is_benchmark': False,}
-    # file_path = r'../data/AS_TrainingSet_BnF_NewsEye_v2/'
-    datasetor = ArticleDataset(config, 'training')
-    a = datasetor[2]
+    for lang in ['fr', 'fi']:
+        executor.update_parameters(
+            job_name='reading_'+lang,
+            timeout_min=2160 * 4,
+            # gpus_per_node=1,
+            cpus_per_task=5,
+            # mem_gb=40 * 2,
+            # slurm_partition='gpu-a6000',
+            slurm_additional_parameters={
+                'nodelist': 'l3icalcul09'
+            }
+        )
+        executor.submit(process_img, lang)
+    # config = {'lang': r'fi',
+    #           'text_model_name': "dbmdz/bert-base-historic-multilingual-64k-td-cased",
+    #           'max_token_num': 512,
+    #           'device': 'cpu',
+    #           'use_sep_fig': True,
+    #           'vision_model_name': 'microsoft/trocr-base-handwritten',
+    #           'resize': (512, 512),
+    #           'is_benchmark': False,}
+    # datasetor = ArticleDataset(config, 'training')
+    # a = datasetor[2]
 
    # def _organize_by_article(self, annotation_list, file_path):
    #      tokenized_result = []
