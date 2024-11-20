@@ -5,9 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e2ff95f0-cec4-41a7-8cb2-d9f701d8fd42" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/utils/data_organize.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/deployment.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
@@ -16,11 +15,16 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/benchmark/xycut.py" beforeDir="false" afterPath="$PROJECT_DIR$/benchmark/xycut.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/loop.py" beforeDir="false" afterPath="$PROJECT_DIR$/loop.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/article_merge_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/article_merge_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/article_single_fig_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/article_single_fig_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/model_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/model_factory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/model_prototype.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/model_prototype.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/model/reading_order_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/reading_order_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/algorithm_based.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/algorithm_based.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/data_organize.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/data_organize.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/datasetor_reading_order.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/datasetor_reading_order.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/graph_dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/graph_dataset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/link_paragraph.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/link_paragraph.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/evaluator.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/evaluator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/focal_loss.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/focal_loss.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/page_drawer.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/page_drawer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/reading_order_evaluator.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/reading_order_evaluator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/xml_reader.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/xml_reader.py" afterDir="false" />
@@ -216,8 +220,8 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.train" />
-        <item itemvalue="Python.datasetor_reading_order (1)" />
         <item itemvalue="Python.loop" />
+        <item itemvalue="Python.datasetor_reading_order (1)" />
         <item itemvalue="Python.data_organize" />
         <item itemvalue="Python.reading_order_model" />
       </list>
@@ -279,7 +283,15 @@
       <workItem from="1731487927699" duration="17334000" />
       <workItem from="1731572836983" duration="1622000" />
       <workItem from="1731583915726" duration="38000" />
-      <workItem from="1731583961661" duration="17926000" />
+      <workItem from="1731583961661" duration="17941000" />
+      <workItem from="1731604262890" duration="99000" />
+      <workItem from="1731604367394" duration="206000" />
+      <workItem from="1731661129482" duration="7471000" />
+      <workItem from="1731845367773" duration="1338000" />
+      <workItem from="1731919891458" duration="4693000" />
+      <workItem from="1732007606197" duration="667000" />
+      <workItem from="1732009555185" duration="7681000" />
+      <workItem from="1732094174691" duration="7144000" />
     </task>
     <servers />
   </component>
@@ -311,13 +323,13 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/utils/datasetor_reading_order.py</url>
-          <line>216</line>
+          <line>217</line>
           <option name="timeStamp" value="191" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/utils/evaluator.py</url>
-          <line>101</line>
-          <option name="timeStamp" value="204" />
+          <line>96</line>
+          <option name="timeStamp" value="214" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -338,10 +350,10 @@
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$xycut.coverage" NAME="xycut Coverage Results" MODIFIED="1727779530436" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/benchmark" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$reading_order_model.coverage" NAME="reading_order_model Coverage Results" MODIFIED="1728571144438" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/model" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$datasetor.coverage" NAME="datasetor Coverage Results" MODIFIED="1727955190997" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
-    <SUITE FILE_PATH="coverage/reading_order_ar_sep$loop.coverage" NAME="loop Coverage Results" MODIFIED="1731421943761" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/reading_order_ar_sep$loop.coverage" NAME="loop Coverage Results" MODIFIED="1731919968234" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$page_drawer.coverage" NAME="page_drawer Coverage Results" MODIFIED="1727630065124" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$data_organize.coverage" NAME="data_organize Coverage Results" MODIFIED="1731077011552" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
-    <SUITE FILE_PATH="coverage/reading_order_ar_sep$train.coverage" NAME="train Coverage Results" MODIFIED="1731603926112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/reading_order_ar_sep$train.coverage" NAME="train Coverage Results" MODIFIED="1732106746678" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$datasetor_reading_order__1_.coverage" NAME="datasetor_reading_order (1) Coverage Results" MODIFIED="1731594860979" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
   </component>
 </project>

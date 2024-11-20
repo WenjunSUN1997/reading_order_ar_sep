@@ -38,29 +38,28 @@ def train(config):
                                   factor=0.5,
                                   patience=2,
                                   verbose=True)
-    loss_all = []
+    loss_all = [0]
     for epoch_index in range(epoch_num):
         for step, data in tqdm(enumerate(train_dataloader), total=len(train_dataloader)):
-            break
             output = reading_order_model(data)
             loss = output['loss']
             loss_all.append(loss.item())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            if (step)%1000 == 0:
+                print('training loss', sum(loss_all)/(len(loss_all)))
+                loss_all = []
+                evaluate_result = model_evaluator(reading_order_model)
+                scheduler.step(evaluate_result['loss'])
+                if best_result == None or evaluate_result['mac'] > best_result['mac']:
+                    best_epoch = epoch_index
+                    best_result = evaluate_result
+                    torch.save(reading_order_model.state_dict(), log_folder_path + 'best_model.pt')
 
-        # print(str(epoch_index) + str(sum(loss_all) / len(loss_all)))
-        evaluate_result = model_evaluator(reading_order_model)
-        scheduler.step(evaluate_result['loss'])
-        if best_result == None or evaluate_result['mac'] > best_result['mac']:
-            best_mac = evaluate_result['mac']
-            best_epoch = epoch_index
-            best_result = evaluate_result
-            torch.save(reading_order_model.state_dict(), log_folder_path + 'best_model.pt')
-
-        output_string = str(epoch_index) + '\n' + str(evaluate_result) + '\n' + 'bset: \n' + str(best_epoch) +str(best_result)
-        with open(log_folder_path + 'log.txt', 'a') as f:
-            f.write(output_string)
+                output_string = str(epoch_index) + '\n' + str(evaluate_result) + '\n' + 'bset: \n' + str(best_epoch) +str(best_result)
+                with open(log_folder_path + 'log.txt', 'a') as f:
+                    f.write(output_string)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -1,7 +1,4 @@
 import submitit
-from transformers import Trainer
-from tensorflow.python.ops.gen_summary_ops import write_histogram_summary_eager_fallback
-
 
 def loop():
     while True:

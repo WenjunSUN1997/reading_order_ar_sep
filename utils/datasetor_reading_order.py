@@ -178,6 +178,7 @@ class ArticleDataset(DatasetPrototype):
         return len(self.data_grouped_index)
 
     def __getitem__(self, idx):
+        # print(idx)
         data = self.data_grouped_index[idx]
         tokenize_result = self.tokenizer(data['text'],
                                          max_length=self.max_token_num,
@@ -199,7 +200,7 @@ class ArticleDataset(DatasetPrototype):
                 'with_sep_fig': with_sep_result['pixel_values'].to(self.device),
                 'no_sep_fig': no_sep_result['pixel_values'].to(self.device),
                 'gt': torch.tensor(data['gt']).to(self.device),
-                'gt_matrix': torch.tensor(data['gt_matrix']).to(self.device)
+                'num_paragraph': torch.tensor(data['gt_matrix'].size(0)).to(self.device)
                 }
 
 def process_img(lang):

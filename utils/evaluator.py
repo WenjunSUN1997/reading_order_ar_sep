@@ -41,22 +41,18 @@ class Evaluator:
                 'r': [r],
                 'f1': [f1]}
 
-    def gt_generate(self, original_gt):
+    def gt_generate(self, length):
         length_record = []
-        result = []
-        gt_matrix = original_gt
         begin = 0
-        for index_1 in range(len(gt_matrix) - 1):
+        for index_1 in range(length - 1):
             end = 0
-            for index_2 in range(index_1 + 1, len(gt_matrix)):
-                result.append(gt_matrix[index_1, index_2])
+            for index_2 in range(index_1 + 1, length):
                 end += 1
 
             length_record.append([begin, begin+end])
             begin = begin+end
 
-        result = torch.stack(result)
-        return result, length_record
+        return length_record
 
     def article_decode(self, max_index, length_record):
         def check_in(index, result):
@@ -90,46 +86,67 @@ class Evaluator:
     def _inner_test_loop(self, model, dataloader):
         loss_this_article = []
         output_this_article = []
+        gt = []
         with torch.no_grad():
             for _, data in enumerate(dataloader):
                 output = model(data)
+                gt+=(data['gt'].squeeze(0).cpu().detach().numpy().tolist())
                 output_this_article += torch.max(output['output'], dim=1).indices.detach().cpu().numpy().tolist()
                 loss_this_article.append(output['loss'].item())
 
-        gt, length_record = self.gt_generate(data['gt_matrix'])
-        article_gt = self.article_decode(gt.cpu().detach().numpy().tolist(), length_record)
+        length_record = self.gt_generate(len(gt))
+        article_gt = self.article_decode(gt, length_record)
         article_prediction = self.article_decode(output_this_article, length_record)
-        return loss_this_article, output_this_article
+        article_evaluation_result = self.evaluate_single_page(article_prediction, article_gt)
+        return sum(loss_this_article), article_evaluation_result
 
     def __call__(self, model):
-        loss = []
-        for dataloader in tqdm(self.dataloader_list):
-            loss_this_article, output_this_article = self._inner_test_loop(model, dataloader)
-            loss += loss_this_article
-
-    def model_evaluate(self, model, dataloader):
         loss = []
         p = []
         r = []
         f1 = []
         ppa = []
-        error_value_list = []
-        print('validating......\n')
-        with torch.no_grad():
-            for step, data in tqdm(enumerate(dataloader), total=len(dataloader)):
-                output = model(data)
-                loss.append(output['loss'].item())
-                error_value_list += output['error_value_list'].tolist()
-                r += output['r']
-                f1 += output['f1']
-                ppa += output['ppa']
-                p += output['p']
+        mac = []
+        for dataloader in tqdm(self.dataloader_list):
+            loss_this_article, article_evaluation_result = self._inner_test_loop(model, dataloader)
+            loss.append(loss_this_article)
+            p.append(article_evaluation_result['p'])
+            r.append(article_evaluation_result['r'])
+            f1.append(article_evaluation_result['f1'])
+            ppa.append(article_evaluation_result['ppa'])
+            mac.append(1 - sum(article_evaluation_result['error_value_list']) / len(article_evaluation_result['error_value_list']))
 
         return {'loss': sum(loss) / len(loss),
-                'error_value_list': sum(error_value_list) / len(error_value_list),
-                'mac': 1 - sum(error_value_list) / len(error_value_list),
+                'mac': sum(mac) / len(mac),
                 'ppa': sum(ppa) / len(ppa),
                 'p': sum(p) / len(p),
                 'r': sum(r) / len(r),
-                'f1': sum(f1) / len(f1)}
+                'f1': sum(f1) / len(f1)
+                }
 
+    # def model_evaluate(self, model, dataloader):
+    #     loss = []
+    #     p = []
+    #     r = []
+    #     f1 = []
+    #     ppa = []
+    #     error_value_list = []
+    #     print('validating......\n')
+    #     with torch.no_grad():
+    #         for step, data in tqdm(enumerate(dataloader), total=len(dataloader)):
+    #             output = model(data)
+    #             loss.append(output['loss'].item())
+    #             error_value_list += output['error_value_list'].tolist()
+    #             r += output['r']
+    #             f1 += output['f1']
+    #             ppa += output['ppa']
+    #             p += output['p']
+    #
+    #     return {'loss': sum(loss) / len(loss),
+    #             'error_value_list': sum(error_value_list) / len(error_value_list),
+    #             'mac': 1 - sum(error_value_list) / len(error_value_list),
+    #             'ppa': sum(ppa) / len(ppa),
+    #             'p': sum(p) / len(p),
+    #             'r': sum(r) / len(r),
+    #             'f1': sum(f1) / len(f1)}
+    #
