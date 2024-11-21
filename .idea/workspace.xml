@@ -78,7 +78,7 @@
     "Python.loop.executor": "Run",
     "Python.page_drawer.executor": "Debug",
     "Python.reading_order_model.executor": "Debug",
-    "Python.train.executor": "Debug",
+    "Python.train.executor": "Run",
     "Python.xycut.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "master",
@@ -291,7 +291,8 @@
       <workItem from="1731919891458" duration="4693000" />
       <workItem from="1732007606197" duration="667000" />
       <workItem from="1732009555185" duration="7681000" />
-      <workItem from="1732094174691" duration="7144000" />
+      <workItem from="1732094174691" duration="12261000" />
+      <workItem from="1732176496674" duration="3699000" />
     </task>
     <servers />
   </component>
@@ -326,11 +327,6 @@
           <line>217</line>
           <option name="timeStamp" value="191" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/utils/evaluator.py</url>
-          <line>96</line>
-          <option name="timeStamp" value="214" />
-        </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
         <breakpoint type="python-exception">
@@ -353,7 +349,7 @@
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$loop.coverage" NAME="loop Coverage Results" MODIFIED="1731919968234" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$page_drawer.coverage" NAME="page_drawer Coverage Results" MODIFIED="1727630065124" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$data_organize.coverage" NAME="data_organize Coverage Results" MODIFIED="1731077011552" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
-    <SUITE FILE_PATH="coverage/reading_order_ar_sep$train.coverage" NAME="train Coverage Results" MODIFIED="1732106746678" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/reading_order_ar_sep$train.coverage" NAME="train Coverage Results" MODIFIED="1732177958191" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/reading_order_ar_sep$datasetor_reading_order__1_.coverage" NAME="datasetor_reading_order (1) Coverage Results" MODIFIED="1731594860979" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
   </component>
 </project>

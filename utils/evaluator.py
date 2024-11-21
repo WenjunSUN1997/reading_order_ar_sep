@@ -44,13 +44,11 @@ class Evaluator:
     def gt_generate(self, length):
         length_record = []
         begin = 0
-        for index_1 in range(length - 1):
-            end = 0
-            for index_2 in range(index_1 + 1, length):
-                end += 1
-
-            length_record.append([begin, begin+end])
-            begin = begin+end
+        while length >= 1 :
+            end = length - 1 + begin
+            length_record.append([begin, end])
+            begin = end
+            length -= 1
 
         return length_record
 
@@ -94,7 +92,7 @@ class Evaluator:
                 output_this_article += torch.max(output['output'], dim=1).indices.detach().cpu().numpy().tolist()
                 loss_this_article.append(output['loss'].item())
 
-        length_record = self.gt_generate(len(gt))
+        length_record = self.gt_generate(data['num_paragraph'][0][0].item())
         article_gt = self.article_decode(gt, length_record)
         article_prediction = self.article_decode(output_this_article, length_record)
         article_evaluation_result = self.evaluate_single_page(article_prediction, article_gt)

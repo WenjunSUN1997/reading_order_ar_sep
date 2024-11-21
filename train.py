@@ -47,7 +47,7 @@ def train(config):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if (step)%1000 == 0:
+            if (step + 1)%1000 == 0:
                 print('training loss', sum(loss_all)/(len(loss_all)))
                 loss_all = []
                 evaluate_result = model_evaluator(reading_order_model)
