@@ -10,10 +10,10 @@ class Evaluator:
         with open(config['lang'] + '_test_set.txt', 'r') as f:
             self.file_name_list = f.read().split('\n')[:-1]
 
-        self.dataloader_list = [DataLoader(ArticleDataset(config, 'test', file_name),
+        self.dataloader_list =[x for x in [DataLoader(ArticleDataset(config, 'test', file_name),
                                            batch_size=config['batch_size'],
                                            shuffle=False)
-                                for file_name in self.file_name_list]
+                                          for file_name in self.file_name_list] if len(x) < 800]
 
     def evaluate_single_page(self, prediction, truth):
         correct_num = 0
@@ -85,12 +85,13 @@ class Evaluator:
         loss_this_article = []
         output_this_article = []
         gt = []
-        with torch.no_grad():
-            for _, data in enumerate(dataloader):
-                output = model(data)
-                gt+=(data['gt'].squeeze(0).cpu().detach().numpy().tolist())
-                output_this_article += torch.max(output['output'], dim=1).indices.detach().cpu().numpy().tolist()
-                loss_this_article.append(output['loss'].item())
+        for _, data in tqdm(enumerate(dataloader), total=len(dataloader)):
+            # if _ < 28:
+            #     continue
+            output = model(data)
+            gt+=(data['gt'].squeeze(0).cpu().detach().numpy().tolist())
+            output_this_article += torch.max(output['output'], dim=1).indices.detach().cpu().numpy().tolist()
+            loss_this_article.append(output['loss'].item())
 
         length_record = self.gt_generate(data['num_paragraph'][0][0].item())
         article_gt = self.article_decode(gt, length_record)
@@ -107,11 +108,15 @@ class Evaluator:
         mac = []
         for dataloader in tqdm(self.dataloader_list):
             loss_this_article, article_evaluation_result = self._inner_test_loop(model, dataloader)
+            # try:
+            #     loss_this_article, article_evaluation_result = self._inner_test_loop(model, dataloader)
+            # except:
+            #     continue
             loss.append(loss_this_article)
-            p.append(article_evaluation_result['p'])
-            r.append(article_evaluation_result['r'])
-            f1.append(article_evaluation_result['f1'])
-            ppa.append(article_evaluation_result['ppa'])
+            p += article_evaluation_result['p']
+            r += article_evaluation_result['r']
+            f1 += article_evaluation_result['f1']
+            ppa += article_evaluation_result['ppa']
             mac.append(1 - sum(article_evaluation_result['error_value_list']) / len(article_evaluation_result['error_value_list']))
 
         return {'loss': sum(loss) / len(loss),

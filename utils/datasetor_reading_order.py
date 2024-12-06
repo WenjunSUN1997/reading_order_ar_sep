@@ -3,8 +3,6 @@ import submitit
 import copy
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
-from benchmark.xycut import benchmark
 from utils.xml_reader import XmlProcessor
 import os
 from transformers import AutoTokenizer,  AutoProcessor
@@ -151,6 +149,9 @@ class ArticleDataset(DatasetPrototype):
         index = 0
         for file_path in tqdm(self.file_name_list):
             annotation_list = XmlProcessor(0, file_path).get_annotation()
+            if len(annotation_list) >= 1000:
+                continue
+
             _, article_matrix = self.generate_gt(annotation_list)
             img_folder = os.path.join(self.img_root_path, file_path.split('/')[-1].replace('.xml', '/'))
             for index_1 in range(len(annotation_list)-1):
@@ -178,7 +179,6 @@ class ArticleDataset(DatasetPrototype):
         return len(self.data_grouped_index)
 
     def __getitem__(self, idx):
-        # print(idx)
         data = self.data_grouped_index[idx]
         tokenize_result = self.tokenizer(data['text'],
                                          max_length=self.max_token_num,
@@ -187,13 +187,23 @@ class ArticleDataset(DatasetPrototype):
                                          padding='max_length')
         benchmark_0 = Image.open(data['benchmark'][0]).convert('RGB').resize(self.resize)
         benchmark_1 = Image.open(data['benchmark'][1]).convert('RGB').resize(self.resize)
-        benchmark_result = self.vision_processor([benchmark_0, benchmark_1], return_tensors="pt", do_resize=False)
+
         with_sep_0 = Image.open(data['with_sep'][0]).convert('RGB').resize(self.resize)
         with_sep_1 = Image.open(data['with_sep'][1]).convert('RGB').resize(self.resize)
-        with_sep_result = self.vision_processor([with_sep_0, with_sep_1], return_tensors="pt", do_resize=False)
+
         no_sep_0 = Image.open(data['no_sep'][0]).convert('RGB').resize(self.resize)
         no_sep_1 = Image.open(data['no_sep'][1]).convert('RGB').resize(self.resize)
-        no_sep_result = self.vision_processor([no_sep_0, no_sep_1], return_tensors="pt", do_resize=False)
+        benchmark_result = self.vision_processor([benchmark_0, benchmark_1], return_tensors="pt", do_resize=False)
+        if self.config['goal'] == 'single_fig':
+            with_sep_result = self.vision_processor([with_sep_0, with_sep_1], return_tensors="pt", do_resize=False)
+            no_sep_result = self.vision_processor([no_sep_0, no_sep_1], return_tensors="pt", do_resize=False)
+
+        elif self.config['goal'] in ['merge_fig', 'qformer']:
+            with_sep_0.paste(with_sep_1)
+            no_sep_0.paste(no_sep_1)
+            with_sep_result = self.vision_processor([with_sep_0], return_tensors="pt", do_resize=False)
+            no_sep_result = self.vision_processor([no_sep_0], return_tensors="pt", do_resize=False)
+
         return {'input_ids': tokenize_result['input_ids'].to(self.device),
                 'attention_mask': tokenize_result['attention_mask'].to(self.device),
                 'benchmark_fig': benchmark_result['pixel_values'].to(self.device),

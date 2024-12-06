@@ -8,37 +8,34 @@ from utils.datasetor_reading_order import ArticleDataset
 from utils.evaluator import Evaluator
 import os
 from datetime import datetime
+import submitit
 
 torch.manual_seed(3407)
 
 def train(config):
-    log_root = 'logs/'
-    os.makedirs(log_root, exist_ok=True)
-    current_time = datetime.now().strftime("%m%d%H%M%S")
-    log_folder_path = 'logs/'+ current_time + '/'
-    os.makedirs(log_folder_path, exist_ok=True)
     best_result = None
     best_epoch = 0
     epoch_num = 1000
-    training_dataseter = ArticleDataset(config, goal='training')
-    train_dataloader = DataLoader(training_dataseter, batch_size=config['batch_size'], shuffle=False)
     reading_order_model = model_factory(config)
     reading_order_model.to(config['device'])
+    training_dataseter = ArticleDataset(config, goal='training')
+    train_dataloader = DataLoader(training_dataseter, batch_size=config['batch_size'], shuffle=False)
     model_evaluator = Evaluator(config)
-    # reading_order_model = torch.nn.DataParallel(reading_order_model)
-    # if torch.cuda.device_count() > 1 and config['vision_model_name'] !='cnn':
-    #     reading_order_model.vision_model.to('cuda:1')
-
     if config['half']:
         reading_order_model.half()
 
     optimizer = torch.optim.AdamW(reading_order_model.parameters(), lr=config['lr'])
     scheduler = ReduceLROnPlateau(optimizer,
                                   mode='min',
-                                  factor=0.5,
+                                  factor=0.8,
                                   patience=2,
                                   verbose=True)
     loss_all = [0]
+    log_root = 'logs/'
+    os.makedirs(log_root, exist_ok=True)
+    current_time = datetime.now().strftime("%m%d%H%M%S")
+    log_folder_path = 'logs/' + current_time + '/'
+    os.makedirs(log_folder_path, exist_ok=True)
     for epoch_index in range(epoch_num):
         for step, data in tqdm(enumerate(train_dataloader), total=len(train_dataloader)):
             output = reading_order_model(data)
@@ -47,10 +44,11 @@ def train(config):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if (step + 1)%1000 == 0:
-                print('training loss', sum(loss_all)/(len(loss_all)))
+            if (step + 1 ) % int(len(train_dataloader)/2) == 0:
+                print('training loss:', sum(loss_all)/(len(loss_all)))
                 loss_all = []
                 evaluate_result = model_evaluator(reading_order_model)
+                print(evaluate_result)
                 scheduler.step(evaluate_result['loss'])
                 if best_result == None or evaluate_result['mac'] > best_result['mac']:
                     best_epoch = epoch_index
@@ -58,6 +56,7 @@ def train(config):
                     torch.save(reading_order_model.state_dict(), log_folder_path + 'best_model.pt')
 
                 output_string = str(epoch_index) + '\n' + str(evaluate_result) + '\n' + 'bset: \n' + str(best_epoch) +str(best_result)
+                print(output_string)
                 with open(log_folder_path + 'log.txt', 'a') as f:
                     f.write(output_string)
 
@@ -65,14 +64,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--lang", default='fi', choices=['fr', 'fi'])
     parser.add_argument("--text_model_name", default='dbmdz/bert-base-historic-multilingual-64k-td-cased')
-    parser.add_argument("--vision_model_name", default='cnn')
+    parser.add_argument("--vision_model_name", default="google/vit-base-patch16-224-in21k")
+    # parser.add_argument("--vision_model_name", default="cnn")
     parser.add_argument("--max_token_num", default=256*2, type=int)
     parser.add_argument("--batch_size", default=16, type=int)
-    parser.add_argument("--lr", default=5e-5, type=float)
+    parser.add_argument("--query_number", default=32, type=int)
+    parser.add_argument("--lr", default=1e-5, type=float)
     parser.add_argument("--device", default='cuda:0')
     parser.add_argument("--half", default='0')
     parser.add_argument("--resize", default='512,512')
-    parser.add_argument("--goal", default='develop', choices=['develop', 'benchmark'])
+    parser.add_argument("--goal", default='qformer', choices=['single_fig', 'merge_fig', 'benchmark', 'qformer'])
     parser.add_argument("--use_sep_fig", default=False)
     parser.add_argument('--is_benchmark', default=False, action='store_true')
     parser.add_argument('--use_seq_background', default=False, action='store_true')
@@ -85,7 +86,23 @@ if __name__ == "__main__":
     else:
         config['half'] = False
 
-    train(config)
+    # train(config)
+    executor = submitit.AutoExecutor(
+        folder='/Utilisateurs/wsun01/logs/')  # Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
+    executor.update_parameters(
+        job_name='article_sep_trans',
+        timeout_min=2160 * 4,
+        gpus_per_node=1,
+        cpus_per_task=5,
+        mem_gb=100,
+        # slurm_partition='gpu-a6000',
+        slurm_additional_parameters={
+            'nodelist': 'l3icalcul10'
+        }
+    )
+    executor.submit(train, config )
+
+
 
     # config = {'lang': r'fi',
     #           'text_model_name': "dbmdz/bert-base-historic-multilingual-64k-td-cased",

@@ -14,7 +14,7 @@ if __name__ == "__main__":
         mem_gb=90 * 2,
         # slurm_partition='gpu-a6000',
         slurm_additional_parameters={
-            'nodelist': 'l3icalcul07'
+            'nodelist': 'l3icalcul10'
         }
     )
     executor.submit(loop)
