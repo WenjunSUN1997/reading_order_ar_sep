@@ -12,10 +12,10 @@ class ArQFormer(ModlePrototype):
         q_former_config.is_decoder = True
         self.query_number = config['query_number']
         self.q_former = AutoModel.from_pretrained("bert-base-uncased", config=q_former_config)
-        self.text_query = torch.nn.Parameter(torch.zeros(1, config['query_number'], self.q_former.config.hidden_size))
-        self.vision_query = torch.nn.Parameter(torch.zeros(1, config['query_number'], self.q_former.config.hidden_size))
+        self.text_query = torch.nn.Parameter(torch.ones(1, config['query_number'], self.q_former.config.hidden_size))
+        self.vision_query = torch.nn.Parameter(torch.ones(1, config['query_number'], self.q_former.config.hidden_size))
         self.classification_linear = torch.nn.Linear(self.q_former.config.hidden_size, 2)
-        self.loss_func = FocalLoss(gamma=2, alpha=0.25, task_type='binary')
+        # self.loss_func = FocalLoss(gamma=2, alpha=0.25, task_type='binary')
 
     def forward(self, inputs):
         inputs = self._reshape_input(inputs)
@@ -46,5 +46,6 @@ class ArQFormer(ModlePrototype):
         text_loss = self.loss_func(text_output_linear, inputs['gt'].squeeze(0))
         vision_loss = self.loss_func(vision_output_linear, inputs['gt'].squeeze(0))
         overall_loss = self.loss_func(overall_output_linear, inputs['gt'].squeeze(0))
-        loss = text_loss + vision_loss + overall_loss
+        # loss = text_loss + vision_loss + overall_loss
+        loss = overall_loss
         return {'loss': loss, 'output': overall_output_linear}

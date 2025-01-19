@@ -4,7 +4,7 @@ from model.model_factory import model_factory
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
-from utils.datasetor_reading_order import ArticleDataset
+from utils.datasetor_reading_order import get_dataet
 from utils.evaluator import Evaluator
 import os
 from datetime import datetime
@@ -18,7 +18,7 @@ def train(config):
     epoch_num = 1000
     reading_order_model = model_factory(config)
     reading_order_model.to(config['device'])
-    training_dataseter = ArticleDataset(config, goal='training')
+    training_dataseter = get_dataet(config, goal='training')
     train_dataloader = DataLoader(training_dataseter, batch_size=config['batch_size'], shuffle=False)
     model_evaluator = Evaluator(config)
     if config['half']:
@@ -44,23 +44,34 @@ def train(config):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if (step + 1 ) % int(len(train_dataloader)/2) == 0:
-                print('training loss:', sum(loss_all)/(len(loss_all)))
+            if (step + 1 ) % int(len(train_dataloader)/4) == 0:
+                training_loss = sum(loss_all)/(len(loss_all))
+                # print('training loss:', training_loss)
+                # print('\n')
                 loss_all = []
                 evaluate_result = model_evaluator(reading_order_model)
-                print(evaluate_result)
+                # print('eva_result:', evaluate_result)
+                # print('\n')
                 scheduler.step(evaluate_result['loss'])
                 if best_result == None or evaluate_result['mac'] > best_result['mac']:
                     best_epoch = epoch_index
                     best_result = evaluate_result
                     torch.save(reading_order_model.state_dict(), log_folder_path + 'best_model.pt')
 
-                output_string = str(epoch_index) + '\n' + str(evaluate_result) + '\n' + 'bset: \n' + str(best_epoch) +str(best_result)
+                output_string = (str(epoch_index) + '\n'
+                                 +'training_loss: ' + str(training_loss)+ '\n'
+                                 + 'eva_result: ' + str(evaluate_result) + '\n'
+                                 + 'bset: \n' + str(best_epoch) +str(best_result) + '\n'
+                                 + '_______________________\n')
                 print(output_string)
                 with open(log_folder_path + 'log.txt', 'a') as f:
                     f.write(output_string)
 
 if __name__ == "__main__":
+    # tokenizer = AutoTokenizer.from_pretrained('bert-base-cased')
+    # bert = AutoModel.from_pretrained('bert-base-cased')
+    # inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+    # outputs = bert(**inputs)
     parser = argparse.ArgumentParser()
     parser.add_argument("--lang", default='fi', choices=['fr', 'fi'])
     parser.add_argument("--text_model_name", default='dbmdz/bert-base-historic-multilingual-64k-td-cased')
@@ -77,6 +88,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_sep_fig", default=False)
     parser.add_argument('--is_benchmark', default=False, action='store_true')
     parser.add_argument('--use_seq_background', default=False, action='store_true')
+    parser.add_argument("--dataset_name", default='fullcon')
     args = parser.parse_args()
     print(args)
     config = vars(args)
@@ -86,7 +98,7 @@ if __name__ == "__main__":
     else:
         config['half'] = False
 
-    # train(config)
+    train(config)
     executor = submitit.AutoExecutor(
         folder='/Utilisateurs/wsun01/logs/')  # Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
     executor.update_parameters(
@@ -100,7 +112,7 @@ if __name__ == "__main__":
             'nodelist': 'l3icalcul10'
         }
     )
-    executor.submit(train, config )
+    # executor.submit(train, config )
 
 
 

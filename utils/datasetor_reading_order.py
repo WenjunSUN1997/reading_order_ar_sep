@@ -6,10 +6,17 @@ from tqdm import tqdm
 from utils.xml_reader import XmlProcessor
 import os
 from transformers import AutoTokenizer,  AutoProcessor
-from PIL import Image
+from PIL import Image, ImageDraw
 import cv2
 import math
 import numpy as np
+
+def get_dataet(config, goal, file_name=None):
+    if config['dataset_name'] == 'ar':
+        return ArticleDataset(config, goal=goal, file_name=file_name)
+
+    if config['dataset_name'] == 'fullcon':
+        return BlockFullConDataset(config, goal=goal, file_name=file_name)
 
 class DatasetPrototype(Dataset):
     def __init__(self, config, goal, file_name=None):
@@ -212,6 +219,158 @@ class ArticleDataset(DatasetPrototype):
                 'gt': torch.tensor(data['gt']).to(self.device),
                 'num_paragraph': torch.tensor(data['gt_matrix'].size(0)).to(self.device)
                 }
+
+class BlockFullConDataset(DatasetPrototype):
+    def __init__(self, config, goal, file_name=None):
+        super(BlockFullConDataset, self).__init__(config, goal, file_name=file_name)
+        self.data = self._organize_data()
+
+    def _organize_data(self):
+        all_index = 0
+        data_dict = {}
+        for file_path in tqdm(self.file_name_list):
+            img_folder = os.path.join(self.img_root_path, file_path.split('/')[-1].replace('.xml', '/'))
+            annotation_list = XmlProcessor(0, file_path).get_annotation()
+            link_result_list = self._link_based_on_dis(annotation_list)
+            self._draw(file_path,annotation_list, link_result_list)
+            assert len(annotation_list) == len(link_result_list)
+            for anno_index in link_result_list:
+                if link_result_list[anno_index]['right'] is not None:
+                    right_text = [annotation_list[anno_index]['text'],
+                                  link_result_list[anno_index]['right']['text']]
+                    right_benchmark = [img_folder + str(annotation_list[anno_index]['index']) + '_benchmark.jpg',
+                                       img_folder + str(link_result_list[anno_index]['right']['index']) + '_benchmark.jpg']
+
+                    right_with_sep = [img_folder + str(annotation_list[anno_index]['index']) + '_with_sep.jpg',
+                                      img_folder + str(link_result_list[anno_index]['right']['index']) + '_with_sep.jpg']
+                    right_no_sep = [img_folder + str(annotation_list[anno_index]['index']) + '_no_sep.jpg',
+                                    img_folder + str(link_result_list[anno_index]['right']['index']) + '_no_sep.jpg']
+                    right_gt = 1 if annotation_list[anno_index]['paragraph_order'] == \
+                                    link_result_list[anno_index]['right']['paragraph_order'] else 0
+                    data_dict[all_index] = {'text': right_text,
+                                            'benchmark': right_benchmark,
+                                            'with_sep': right_with_sep,
+                                            'no_sep': right_no_sep,
+                                            'gt': right_gt}
+                    all_index += 1
+
+                if link_result_list[anno_index]['bottom'] is not None:
+                    bottom_text = [annotation_list[anno_index]['text'],
+                                  link_result_list[anno_index]['bottom']['text']]
+                    bottom_benchmark = [img_folder + str(annotation_list[anno_index]['index']) + '_benchmark.jpg',
+                                        img_folder + str(link_result_list[anno_index]['bottom']['index']) + '_benchmark.jpg']
+                    bottom_with_sep = [img_folder + str(annotation_list[anno_index]['index']) + '_with_sep.jpg',
+                                      img_folder + str(link_result_list[anno_index]['bottom']['index']) + '_with_sep.jpg']
+                    bottom_no_sep = [img_folder + str(annotation_list[anno_index]['index']) + '_no_sep.jpg',
+                                     img_folder + str(link_result_list[anno_index]['bottom']['index']) + '_no_sep.jpg']
+                    bottom_gt = 1 if annotation_list[anno_index]['paragraph_order'] == link_result_list[anno_index]['bottom']['paragraph_order'] else 0
+                    data_dict[all_index] = {'text': bottom_text,
+                                            'benchmark': bottom_benchmark,
+                                            'with_sep': bottom_with_sep,
+                                            'no_sep': bottom_no_sep,
+                                            'gt': bottom_gt}
+                    all_index += 1
+
+        return data_dict
+
+    def _link_based_on_dis(self, annotation_list):
+        def euclidean_distance(point1, point2):
+            a, b = point1
+            c, d = point2
+            distance = math.sqrt((c - a) ** 2 + (d - b) ** 2)
+            return distance
+
+        def judge(anno, anno_compare):
+            if anno['index'] == anno_compare['index']:
+                return False
+            # if abs(anno_compare['center_point'][0]-anno['center_point'][0]) >= 500:
+            #     return False
+            # if abs(anno_compare['center_point'][1]-anno['center_point'][1]) >= 500:
+            #     return False
+            if euclidean_distance(anno_compare['center_point'], anno['center_point']) > 1500:
+                return False
+
+            return True
+
+        result = {}
+        for index, anno in enumerate(annotation_list):
+            min_right = 1000000
+            min_right_anno = None
+            min_bottom = 1000000
+            min_bottom_anno = None
+            for index_compare, anno_compare in enumerate(annotation_list):
+                if not judge(anno, anno_compare):
+                    continue
+                right_dis = anno_compare['center_point'][0] - anno['center_point'][0]
+                bottom_dis = anno_compare['center_point'][1] - anno['center_point'][1]
+                if right_dis >= 0:
+                    if right_dis < min_right:
+                        min_right = right_dis
+                        min_right_anno = anno_compare
+
+                if bottom_dis >= 0:
+                    if bottom_dis < min_bottom:
+                        min_bottom = bottom_dis
+                        min_bottom_anno = anno_compare
+
+            result[index] = {'right': min_right_anno,
+                             'bottom': min_bottom_anno}
+
+        return result
+
+    def _draw(self, file_path, anno_list, link_result_list):
+        os.makedirs('data/link_result/', exist_ok=True)
+        img_draw = Image.open(file_path.replace('xml', 'jpg')).convert("RGB")
+        draw = ImageDraw.Draw(img_draw, "RGB")
+        for anno_index in link_result_list:
+            anno = anno_list[anno_index]
+            draw.rectangle([(anno['bbox'][0][0], anno['bbox'][0][1]), (anno['bbox'][2][0], anno['bbox'][2][1])], outline='green', width=20)
+            link_result = link_result_list[anno_index]
+            if link_result['right'] is not None:
+                draw.line([(anno['center_point'][0], anno['center_point'][1]),
+                           (link_result['right']['center_point'][0], link_result['right']['center_point'][1])], 'red', width=10)
+            if link_result['bottom'] is not None:
+                draw.line([(anno['center_point'][0], anno['center_point'][1]),
+                           (link_result['bottom']['center_point'][0], link_result['bottom']['center_point'][1])], 'red', width=10)
+
+        img_draw.save('data/link_result/'+file_path.split('/')[-1]+'.jpg')
+
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        data = self.data_grouped_index[idx]
+        tokenize_result = self.tokenizer(data['text'],
+                                         max_length=self.max_token_num,
+                                         truncation=True,
+                                         return_tensors='pt',
+                                         padding='max_length')
+        benchmark_0 = Image.open(data['benchmark'][0]).convert('RGB').resize(self.resize)
+        benchmark_1 = Image.open(data['benchmark'][1]).convert('RGB').resize(self.resize)
+
+        with_sep_0 = Image.open(data['with_sep'][0]).convert('RGB').resize(self.resize)
+        with_sep_1 = Image.open(data['with_sep'][1]).convert('RGB').resize(self.resize)
+
+        no_sep_0 = Image.open(data['no_sep'][0]).convert('RGB').resize(self.resize)
+        no_sep_1 = Image.open(data['no_sep'][1]).convert('RGB').resize(self.resize)
+        benchmark_result = self.vision_processor([benchmark_0, benchmark_1], return_tensors="pt", do_resize=False)
+        if self.config['goal'] == 'single_fig':
+            with_sep_result = self.vision_processor([with_sep_0, with_sep_1], return_tensors="pt", do_resize=False)
+            no_sep_result = self.vision_processor([no_sep_0, no_sep_1], return_tensors="pt", do_resize=False)
+
+        elif self.config['goal'] in ['merge_fig', 'qformer']:
+            with_sep_0.paste(with_sep_1)
+            no_sep_0.paste(no_sep_1)
+            with_sep_result = self.vision_processor([with_sep_0], return_tensors="pt", do_resize=False)
+            no_sep_result = self.vision_processor([no_sep_0], return_tensors="pt", do_resize=False)
+
+        return {'input_ids': tokenize_result['input_ids'].to(self.device),
+                'attention_mask': tokenize_result['attention_mask'].to(self.device),
+                'benchmark_fig': benchmark_result['pixel_values'].to(self.device),
+                'with_sep_fig': with_sep_result['pixel_values'].to(self.device),
+                'no_sep_fig': no_sep_result['pixel_values'].to(self.device),
+                'gt': torch.tensor(data['gt']).to(self.device)}
 
 def process_img(lang):
     if lang == 'fr':

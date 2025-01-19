@@ -1,16 +1,15 @@
 import numpy as np
 import torch
-from openpyxl.styles.builtins import output
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from utils.datasetor_reading_order import ArticleDataset
+from utils.datasetor_reading_order import ArticleDataset, get_dataet
 
 class Evaluator:
     def __init__(self,config):
         with open(config['lang'] + '_test_set.txt', 'r') as f:
             self.file_name_list = f.read().split('\n')[:-1]
 
-        self.dataloader_list =[x for x in [DataLoader(ArticleDataset(config, 'test', file_name),
+        self.dataloader_list =[x for x in [DataLoader(get_dataet(config, 'test', file_name),
                                            batch_size=config['batch_size'],
                                            shuffle=False)
                                           for file_name in self.file_name_list] if len(x) < 800]
