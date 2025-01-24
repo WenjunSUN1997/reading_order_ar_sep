@@ -5,7 +5,7 @@ from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from utils.datasetor_reading_order import get_dataet
-from utils.evaluator import Evaluator
+from utils.evaluator import get_evaluator
 import os
 from datetime import datetime
 import submitit
@@ -19,8 +19,10 @@ def train(config):
     reading_order_model = model_factory(config)
     reading_order_model.to(config['device'])
     training_dataseter = get_dataet(config, goal='training')
-    train_dataloader = DataLoader(training_dataseter, batch_size=config['batch_size'], shuffle=False)
-    model_evaluator = Evaluator(config)
+    train_dataloader = DataLoader(training_dataseter,
+                                  batch_size=config['batch_size'],
+                                  shuffle=False)
+    model_evaluator = get_evaluator(config)
     if config['half']:
         reading_order_model.half()
 
@@ -38,13 +40,14 @@ def train(config):
     os.makedirs(log_folder_path, exist_ok=True)
     for epoch_index in range(epoch_num):
         for step, data in tqdm(enumerate(train_dataloader), total=len(train_dataloader)):
+            # evaluate_result = model_evaluator(reading_order_model)
             output = reading_order_model(data)
             loss = output['loss']
             loss_all.append(loss.item())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if (step + 1 ) % int(len(train_dataloader)/4) == 0:
+            if (step + 1 ) % int(len(train_dataloader)/2) == 0:
                 training_loss = sum(loss_all)/(len(loss_all))
                 # print('training loss:', training_loss)
                 # print('\n')
@@ -73,12 +76,12 @@ if __name__ == "__main__":
     # inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
     # outputs = bert(**inputs)
     parser = argparse.ArgumentParser()
-    parser.add_argument("--lang", default='fi', choices=['fr', 'fi'])
+    parser.add_argument("--lang", default='fr', choices=['fr', 'fi'])
     parser.add_argument("--text_model_name", default='dbmdz/bert-base-historic-multilingual-64k-td-cased')
     parser.add_argument("--vision_model_name", default="google/vit-base-patch16-224-in21k")
     # parser.add_argument("--vision_model_name", default="cnn")
     parser.add_argument("--max_token_num", default=256*2, type=int)
-    parser.add_argument("--batch_size", default=16, type=int)
+    parser.add_argument("--batch_size", default=8, type=int)
     parser.add_argument("--query_number", default=32, type=int)
     parser.add_argument("--lr", default=1e-5, type=float)
     parser.add_argument("--device", default='cuda:0')
@@ -88,7 +91,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_sep_fig", default=False)
     parser.add_argument('--is_benchmark', default=False, action='store_true')
     parser.add_argument('--use_seq_background', default=False, action='store_true')
-    parser.add_argument("--dataset_name", default='fullcon')
+    parser.add_argument("--dataset_name", default='fullcon', choices=['ar', 'fullcon'])
     args = parser.parse_args()
     print(args)
     config = vars(args)
@@ -102,7 +105,7 @@ if __name__ == "__main__":
     executor = submitit.AutoExecutor(
         folder='/Utilisateurs/wsun01/logs/')  # Can specify cluster='debug' or 'local' to run on the current node instead of on the cluster
     executor.update_parameters(
-        job_name='article_sep_trans',
+        job_name='fr_article_sep_trans',
         timeout_min=2160 * 4,
         gpus_per_node=1,
         cpus_per_task=5,

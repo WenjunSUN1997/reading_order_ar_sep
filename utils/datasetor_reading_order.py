@@ -1,6 +1,8 @@
 import torch
 import submitit
 import copy
+
+from pandas.core.common import any_none
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from utils.xml_reader import XmlProcessor
@@ -232,8 +234,8 @@ class BlockFullConDataset(DatasetPrototype):
             img_folder = os.path.join(self.img_root_path, file_path.split('/')[-1].replace('.xml', '/'))
             annotation_list = XmlProcessor(0, file_path).get_annotation()
             link_result_list = self._link_based_on_dis(annotation_list)
-            self._draw(file_path,annotation_list, link_result_list)
-            assert len(annotation_list) == len(link_result_list)
+            # self._draw(file_path, annotation_list, link_result_list)
+            # assert len(annotation_list) == len(link_result_list)
             for anno_index in link_result_list:
                 if link_result_list[anno_index]['right'] is not None:
                     right_text = [annotation_list[anno_index]['text'],
@@ -251,7 +253,10 @@ class BlockFullConDataset(DatasetPrototype):
                                             'benchmark': right_benchmark,
                                             'with_sep': right_with_sep,
                                             'no_sep': right_no_sep,
-                                            'gt': right_gt}
+                                            'gt': right_gt,
+                                            'length': link_result_list[anno_index]['length'],
+                                            'index': (annotation_list[anno_index]['index'],
+                                                      link_result_list[anno_index]['right']['index'])}
                     all_index += 1
 
                 if link_result_list[anno_index]['bottom'] is not None:
@@ -268,7 +273,11 @@ class BlockFullConDataset(DatasetPrototype):
                                             'benchmark': bottom_benchmark,
                                             'with_sep': bottom_with_sep,
                                             'no_sep': bottom_no_sep,
-                                            'gt': bottom_gt}
+                                            'gt': bottom_gt,
+                                            'length': link_result_list[anno_index]['length'],
+                                            'index': (annotation_list[anno_index]['index'],
+                                                      link_result_list[anno_index]['bottom']['index'])
+                                            }
                     all_index += 1
 
         return data_dict
@@ -280,41 +289,73 @@ class BlockFullConDataset(DatasetPrototype):
             distance = math.sqrt((c - a) ** 2 + (d - b) ** 2)
             return distance
 
-        def judge(anno, anno_compare):
+        def judge(anno, anno_compare, direction=None):
             if anno['index'] == anno_compare['index']:
                 return False
+            # if euclidean_distance(anno_compare['center_point'], anno['center_point']) > 2000:
+            #     return False
             # if abs(anno_compare['center_point'][0]-anno['center_point'][0]) >= 500:
             #     return False
             # if abs(anno_compare['center_point'][1]-anno['center_point'][1]) >= 500:
             #     return False
-            if euclidean_distance(anno_compare['center_point'], anno['center_point']) > 1500:
-                return False
+            if direction == 'right':
+                if abs(anno_compare['center_point'][1]-anno['center_point'][1]) >= 1000:
+                    return False
+            if direction == 'bottom':
+                if abs(anno_compare['center_point'][0]-anno['center_point'][0]) >= 1000:
+                    return False
 
             return True
 
+        def judge_overlap(result:dict, min_bottom_anno, min_right_anno):
+            flag = False
+            for index in result.keys():
+                if result[index]['right'] == min_right_anno and result[index]['bottom'] == min_bottom_anno:
+                    flag = True
+                    break
+                if result[index]['right'] == min_bottom_anno and result[index]['bottom'] == min_right_anno:
+                    flag = True
+                    break
+
+            return flag
+
         result = {}
         for index, anno in enumerate(annotation_list):
-            min_right = 1000000
+            min_right = 1000000000000000
             min_right_anno = None
-            min_bottom = 1000000
+            min_bottom = 1000000000000000
             min_bottom_anno = None
+            right_bottom = anno['bbox'][2]
+
             for index_compare, anno_compare in enumerate(annotation_list):
-                if not judge(anno, anno_compare):
-                    continue
+                right_top = anno_compare['bbox'][1]
+                left_top = anno_compare['bbox'][0]
                 right_dis = anno_compare['center_point'][0] - anno['center_point'][0]
                 bottom_dis = anno_compare['center_point'][1] - anno['center_point'][1]
                 if right_dis >= 0:
-                    if right_dis < min_right:
-                        min_right = right_dis
-                        min_right_anno = anno_compare
+                    if judge(anno, anno_compare, direction='right'):
+                        if euclidean_distance(right_bottom, left_top) < min_right:
+                            min_right = euclidean_distance(right_bottom, left_top)
+                            min_right_anno = anno_compare
 
                 if bottom_dis >= 0:
-                    if bottom_dis < min_bottom:
-                        min_bottom = bottom_dis
-                        min_bottom_anno = anno_compare
+                    if judge(anno, anno_compare, direction='bottom'):
+                        if euclidean_distance(right_bottom, right_top) < min_bottom:
+                            min_bottom = euclidean_distance(right_bottom, right_top)
+                            min_bottom_anno = anno_compare
+
+            if min_right_anno is None and min_bottom_anno is None:
+                min_right_anno = anno
+
+            if min_bottom_anno == min_right_anno:
+                min_bottom_anno = None
+
+            # if judge_overlap(result, min_bottom_anno, min_right_anno):
+            #     continue
 
             result[index] = {'right': min_right_anno,
-                             'bottom': min_bottom_anno}
+                             'bottom': min_bottom_anno,
+                             'length': len(annotation_list)}
 
         return result
 
@@ -340,7 +381,9 @@ class BlockFullConDataset(DatasetPrototype):
         return len(self.data)
 
     def __getitem__(self, idx):
-        data = self.data_grouped_index[idx]
+        data = self.data[idx]
+        index = torch.tensor(data['index'])
+        length = torch.tensor(data['length'])
         tokenize_result = self.tokenizer(data['text'],
                                          max_length=self.max_token_num,
                                          truncation=True,
@@ -370,7 +413,9 @@ class BlockFullConDataset(DatasetPrototype):
                 'benchmark_fig': benchmark_result['pixel_values'].to(self.device),
                 'with_sep_fig': with_sep_result['pixel_values'].to(self.device),
                 'no_sep_fig': no_sep_result['pixel_values'].to(self.device),
-                'gt': torch.tensor(data['gt']).to(self.device)}
+                'gt': torch.tensor(data['gt']).to(self.device),
+                'index': index.to(self.device),
+                'length': length.to(self.device)}
 
 def process_img(lang):
     if lang == 'fr':
